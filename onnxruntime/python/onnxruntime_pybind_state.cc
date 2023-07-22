@@ -78,6 +78,51 @@ static Env& platform_env = Env::Default();
 
 using PyCallback = std::function<void(std::vector<py::object>, py::object user_data, std::string)>;
 
+class AsyncFuture {
+ public:
+  AsyncFuture() : status_ (nullptr) {}
+  ~AsyncFuture() = default;
+  std::vector<py::object> Fetch() const {
+    while (!done_) {
+      std::this_thread::yield();
+    }
+    return GetPyObjects();
+  }
+  std::vector<py::object> TryFetch() const {
+    return done_ ? GetPyObjects() : std::vector<py::object>{};
+  }
+  void FillFetches(std::vector<OrtValue>& fetches, Ort::Status& status) {
+    fetches_ = std::move(fetches);
+    status_ = std::move(status);
+    done_.store(true);
+  }
+
+ private:
+  std::vector<py::object> GetPyObjects() const {
+    ORT_ENFORCE(status_.IsOK(), status_.GetErrorMessage());
+    size_t pos = 0;
+    std::vector<py::object> py_objs;
+    for (const auto& fetch : fetches_) {
+      if (fetch.IsAllocated()) {
+        if (fetch.IsTensor()) {
+          py_objs.push_back(AddTensorAsPyObj(fetch, nullptr, nullptr));
+        } else if (fetch.IsSparseTensor()) {
+          py_objs.push_back(GetPyObjectFromSparseTensor(pos, fetch, nullptr));
+        } else {
+          py_objs.push_back(AddNonTensorAsPyObj(fetch, nullptr, nullptr));
+        }
+      } else {
+        py_objs.push_back(py::none());
+      }
+      ++pos;
+    }
+    return py_objs;
+  }
+  std::vector<OrtValue> fetches_;
+  std::atomic_bool done_{false};
+  Ort::Status status_;
+};
+
 struct AsyncResource {
   std::vector<OrtValue> feeds;
   std::vector<const OrtValue*> feeds_raw;
@@ -91,8 +136,11 @@ struct AsyncResource {
   std::vector<const char*> fetch_names_raw;
 
   RunOptions default_run_option;
-  PyCallback callback;
-  py::object user_data;
+  //PyCallback callback;
+  //py::object user_data;
+
+  AsyncFuture* async_future{};
+  py::object async_object;
 
   void ReserveFeeds(size_t sz) {
     feeds.reserve(sz);
@@ -111,46 +159,19 @@ struct AsyncResource {
 void AsyncCallback(void* user_data, OrtValue** outputs, size_t num_outputs, OrtStatusPtr ort_status) {
   ORT_ENFORCE(user_data, "user data must not be NULL for callback in python");
   std::unique_ptr<AsyncResource> async_resource{reinterpret_cast<AsyncResource*>(user_data)};
+  ORT_ENFORCE(async_resource->async_future, "async future must not be NULL for callback in python");
 
-  Ort::Status status(ort_status);
-  std::vector<py::object> rfetch;
+  Ort::Status status{ort_status};
+  std::vector<OrtValue> fetches;
+  fetches.reserve(num_outputs);
 
-  // return on error
-  if (!status.IsOK()) {
-    async_resource->callback(rfetch, async_resource->user_data, status.GetErrorMessage());
-    return;
-  }
-
-  rfetch.reserve(num_outputs);
-
-  auto fill_fetches = [&]() {
-    size_t pos = 0;
+  if (status.IsOK()) {
     for (size_t ith = 0; ith < num_outputs; ++ith) {
-      const auto& fet = *outputs[ith];
-      if (fet.IsAllocated()) {
-        if (fet.IsTensor()) {
-          rfetch.push_back(AddTensorAsPyObj(fet, nullptr, nullptr));
-        } else if (fet.IsSparseTensor()) {
-          rfetch.push_back(GetPyObjectFromSparseTensor(pos, fet, nullptr));
-        } else {
-          rfetch.push_back(AddNonTensorAsPyObj(fet, nullptr, nullptr));
-        }
-      } else {
-        rfetch.push_back(py::none());
-      }
-      ++pos;
+      fetches.push_back(*outputs[ith]);
     }
-  };
-
-  if (PyGILState_Check()) {
-    fill_fetches();
-  } else {
-    //py::gil_scoped_acquire acquire;
-    auto state = PyGILState_Ensure();
-    fill_fetches();
-    PyGILState_Release(state);
   }
-  async_resource->callback(rfetch, async_resource->user_data, "");
+
+  async_resource->async_future->FillFetches(fetches, status);
 }
 
 template <typename T>
@@ -1761,12 +1782,12 @@ including arg name, arg type (contains both type and shape).)pbdoc")
            [](PyInferenceSession* sess,
               std::vector<std::string> output_names,
               std::map<std::string, py::object> pyfeeds,
-              PyCallback callback, py::object user_data = {},
+              //PyCallback callback, py::object user_data = {},
               RunOptions* run_options = nullptr)
-               -> void {
+               -> py::object {
              std::unique_ptr<AsyncResource> async_resource = std::make_unique<AsyncResource>();
-             async_resource->callback = callback;
-             async_resource->user_data = user_data; // not inc ref
+             //async_resource->callback = callback;
+             //async_resource->user_data = user_data;  // not inc ref
 
              // prepare feeds
              async_resource->ReserveFeeds(pyfeeds.size());
@@ -1788,26 +1809,34 @@ including arg name, arg type (contains both type and shape).)pbdoc")
 
              // prepare fetches
              async_resource->ReserveFetches(output_names.size());
-            for (auto& output_name : output_names) {
-              async_resource->fetch_names.push_back(output_name);
-              async_resource->fetch_names_raw.push_back(async_resource->fetch_names.back().c_str());
-              async_resource->fetches_raw.push_back({});
-            }
+             for (auto& output_name : output_names) {
+               async_resource->fetch_names.push_back(output_name);
+               async_resource->fetch_names_raw.push_back(async_resource->fetch_names.back().c_str());
+               async_resource->fetches_raw.push_back({});
+             }
 
-            const RunOptions* run_async_option = run_options ? run_options : &async_resource->default_run_option;
-            common::Status status = sess->GetSessionHandle()->RunAsync(run_async_option,
-                                                                       gsl::span(async_resource->feed_names_raw.data(), async_resource->feed_names_raw.size()),
-                                                                       gsl::span(async_resource->feeds_raw.data(), async_resource->feeds_raw.size()),
-                                                                       gsl::span(async_resource->fetch_names_raw.data(), async_resource->fetch_names_raw.size()),
-                                                                       gsl::span(async_resource->fetches_raw.data(), async_resource->fetches_raw.size()),
-                                                                       AsyncCallback,
-                                                                       async_resource.get());
+             const RunOptions* run_async_option = run_options ? run_options : &async_resource->default_run_option;
+             auto async_future = std::make_unique<AsyncFuture>();
+             auto py_obj = py::cast(async_future.get(), py::return_value_policy::take_ownership);
+             async_resource->async_future = async_future.get();
+             async_resource->async_object = py_obj;
 
-            if (status.IsOK()) {
-              async_resource.release();
-            }
-            OrtPybindThrowIfError(status);
-          })
+             common::Status status = sess->GetSessionHandle()->RunAsync(run_async_option,
+                                                                        gsl::span(async_resource->feed_names_raw.data(), async_resource->feed_names_raw.size()),
+                                                                        gsl::span(async_resource->feeds_raw.data(), async_resource->feeds_raw.size()),
+                                                                        gsl::span(async_resource->fetch_names_raw.data(), async_resource->fetch_names_raw.size()),
+                                                                        gsl::span(async_resource->fetches_raw.data(), async_resource->fetches_raw.size()),
+                                                                        AsyncCallback,
+                                                                        async_resource.get());
+
+             if (status.IsOK()) {
+               async_resource.release();
+             }
+
+             OrtPybindThrowIfError(status);
+             async_future.release();
+             return py_obj;
+           })
       /// This method accepts a dictionary of feeds (name -> OrtValue) and the list of output_names
       /// and returns a list of python objects representing OrtValues. Each name may represent either
       /// a Tensor, SparseTensor or a TensorSequence.
@@ -1956,6 +1985,10 @@ including arg name, arg type (contains both type and shape).)pbdoc")
       .value("kNextPowerOfTwo", onnxruntime::ArenaExtendStrategy::kNextPowerOfTwo)
       .value("kSameAsRequested", onnxruntime::ArenaExtendStrategy::kSameAsRequested)
       .export_values();
+
+  py::class_<AsyncFuture>(m, "future")
+    .def("fetch", &AsyncFuture::Fetch)
+    .def("try_fetch", &AsyncFuture::TryFetch);
 }
 
 void CreateInferencePybindStateModule(py::module& m) {
