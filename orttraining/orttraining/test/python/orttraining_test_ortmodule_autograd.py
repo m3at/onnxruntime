@@ -53,7 +53,10 @@ def test_gelu():
     class GeLUFunction1(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, bias):
-            ctx.save_for_backward(input, bias)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone(), bias.detach().clone())
             return bias_gelu(bias, input)
 
         @staticmethod
@@ -105,7 +108,10 @@ def test_gelu_custom_func_rets_not_as_module_output():
     class GeLUFunction2(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, bias):
-            ctx.save_for_backward(input, bias)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone(), bias.detach().clone())
             return bias_gelu(bias, input)
 
         @staticmethod
@@ -163,7 +169,10 @@ def test_gelu_multiple_forward_runs():
     class GeLUFunction3(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, bias):
-            ctx.save_for_backward(input, bias)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone(), bias.detach().clone())
             return bias_gelu(bias, input)
 
         @staticmethod
@@ -243,7 +252,10 @@ def test_scalar_and_tuple():
     class ScalarAndTupleFunction(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, alpha, beta, gamma):
-            ctx.save_for_backward(input)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone())
             ctx.alpha = alpha
             ctx.beta = beta
             ctx.gamma = gamma
@@ -290,7 +302,10 @@ def test_scalar_and_tuple_reordered():
     class ScalarAndTupleReorderedFunction(torch.autograd.Function):
         @staticmethod
         def forward(ctx, alpha, beta, input, gamma):
-            ctx.save_for_backward(input)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone())
             ctx.alpha = alpha
             ctx.beta = beta
             ctx.gamma = gamma
@@ -337,7 +352,10 @@ def test_pointer_type():
     class StringInputFunction(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, name: str):
-            ctx.save_for_backward(input)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone())
             ctx.name = name
             return input.detach()
 
@@ -718,7 +736,10 @@ def test_two_outputs_function():
         @staticmethod
         # bias is an optional argument
         def forward(ctx, x, y):
-            ctx.save_for_backward(x, y)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(x.detach().clone(), y.detach().clone())
             w = x + y
             z = x * y
             return w, z
@@ -853,7 +874,10 @@ def test_share_input():
         @staticmethod
         # bias is an optional argument
         def forward(ctx, x, y):
-            ctx.save_for_backward(x, y)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(x.detach().clone(), y.detach().clone())
             w = x + y
             z = x * y
             return w, z
@@ -904,7 +928,10 @@ def test_multiple_stream_in_forward_function():
         @staticmethod
         def forward(ctx, input):
             default_stream = torch.cuda.current_stream()
-            ctx.save_for_backward(input)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone())
             stream = torch.cuda.Stream()
             torch.cuda._sleep(1000 * 1000)
             input = input * 0.2
@@ -956,7 +983,10 @@ def test_nondefault_stream_in_forward_function1():
             # on different stream
             with torch.cuda.stream(stream):
                 stream.wait_stream(default_stream)
-                ctx.save_for_backward(input)
+                # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+                # and will be released after forward function returns (since ORT is not aware of the reference
+                # in ORT allocation plan).
+                ctx.save_for_backward(input.detach().clone())
                 input = input * 0.4
 
             default_stream.wait_stream(stream)
@@ -999,7 +1029,10 @@ def test_nondefault_stream_in_forward_function2():
     class MultipleStreamFunction3(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
-            ctx.save_for_backward(input)
+            # Clone the tensor inputs of forward function since those tensors may be allocated by ORT
+            # and will be released after forward function returns (since ORT is not aware of the reference
+            # in ORT allocation plan).
+            ctx.save_for_backward(input.detach().clone())
             torch.cuda._sleep(1000 * 1000)
             input = input * 0.4
             return input
@@ -1307,7 +1340,7 @@ def test_pythonop_training_mode():
     check_pythonop_training_mode(ortmodule, is_eval_mode=True)
 
 
-def test_python_op_save_input_for_backward(caplog):
+def test_python_op_save_input_for_backward():
     class GeLUFunctionTakeActivationInput(torch.autograd.Function):
         @staticmethod
         def forward(ctx, x):
@@ -1365,14 +1398,15 @@ def test_python_op_save_input_for_backward(caplog):
         return torch.randn(output_size, output_size, dtype=torch.float).requires_grad_()
 
     label_input = torch.ones([output_size])
+    import warnings
 
-    with pytest.raises(Exception) as _:
+    with pytest.raises(Exception) as _, warnings.catch_warnings(record=True) as w:
         run_training_test_and_compare(model_builder, input_generator, label_input)  # noqa: F405
 
     target_str = "Tensor generated by ORT is saved in context, but ORT cannot be aware of"
     found = False
-    for record in caplog.records:
-        if target_str in record.message:
+    for record in w:
+        if target_str in record.message.args[0]:
             found = True
             break
     assert found
