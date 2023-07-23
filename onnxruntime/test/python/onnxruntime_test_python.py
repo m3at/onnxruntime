@@ -557,14 +557,19 @@ class TestInferenceSession(unittest.TestCase):
 
         so = onnxrt.SessionOptions()
         so.intra_op_num_threads = 2
-        sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=available_providers)
+        sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), so, providers=available_providers)
 
         x = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], dtype=np.float32)
         future = sess.run_async(["Y"], {"X": x})
 
-        print ("now wait on fetch")
-        res = future.fetch()
-        print ("fetched")
+        print ("\ntest_run_async: try fetching ...")
+        res = future.fetch(False)
+
+        if len(res) == 0:
+            print("test_run_async: try failed, now wait on fetch")
+            res = future.fetch(True)
+
+        print("test_run_async: fetched")
 
         output_expected = np.array([[1.0, 4.0], [9.0, 16.0], [25.0, 36.0]], dtype=np.float32)
         np.testing.assert_allclose(output_expected, res[0], rtol=1e-05, atol=1e-08)

@@ -80,16 +80,17 @@ using PyCallback = std::function<void(std::vector<py::object>, py::object user_d
 
 class AsyncFuture {
  public:
-  AsyncFuture() : status_ (nullptr) {}
+  AsyncFuture() : status_(nullptr) {}
   ~AsyncFuture() = default;
-  std::vector<py::object> Fetch() const {
-    while (!done_) {
-      std::this_thread::yield();
+  std::vector<py::object> Fetch(bool wait = false) const {
+    if (wait) {
+      while (!done_) {
+        std::this_thread::yield();
+      }
+    } else if (!done_) {
+      return {};
     }
     return GetPyObjects();
-  }
-  std::vector<py::object> TryFetch() const {
-    return done_ ? GetPyObjects() : std::vector<py::object>{};
   }
   void FillFetches(std::vector<OrtValue>& fetches, Ort::Status& status) {
     fetches_ = std::move(fetches);
@@ -136,8 +137,6 @@ struct AsyncResource {
   std::vector<const char*> fetch_names_raw;
 
   RunOptions default_run_option;
-  //PyCallback callback;
-  //py::object user_data;
 
   AsyncFuture* async_future{};
   py::object async_object;
@@ -167,11 +166,12 @@ void AsyncCallback(void* user_data, OrtValue** outputs, size_t num_outputs, OrtS
 
   if (status.IsOK()) {
     for (size_t ith = 0; ith < num_outputs; ++ith) {
-      fetches.push_back(*outputs[ith]);
+      fetches.push_back(std::move(*outputs[ith]));
     }
   }
 
   async_resource->async_future->FillFetches(fetches, status);
+  async_resource->async_object.dec_ref();
 }
 
 template <typename T>
@@ -1782,12 +1782,9 @@ including arg name, arg type (contains both type and shape).)pbdoc")
            [](PyInferenceSession* sess,
               std::vector<std::string> output_names,
               std::map<std::string, py::object> pyfeeds,
-              //PyCallback callback, py::object user_data = {},
               RunOptions* run_options = nullptr)
                -> py::object {
              std::unique_ptr<AsyncResource> async_resource = std::make_unique<AsyncResource>();
-             //async_resource->callback = callback;
-             //async_resource->user_data = user_data;  // not inc ref
 
              // prepare feeds
              async_resource->ReserveFeeds(pyfeeds.size());
@@ -1820,6 +1817,7 @@ including arg name, arg type (contains both type and shape).)pbdoc")
              auto py_obj = py::cast(async_future.get(), py::return_value_policy::take_ownership);
              async_resource->async_future = async_future.get();
              async_resource->async_object = py_obj;
+             async_resource->async_object.inc_ref();
 
              common::Status status = sess->GetSessionHandle()->RunAsync(run_async_option,
                                                                         gsl::span(async_resource->feed_names_raw.data(), async_resource->feed_names_raw.size()),
@@ -1987,8 +1985,7 @@ including arg name, arg type (contains both type and shape).)pbdoc")
       .export_values();
 
   py::class_<AsyncFuture>(m, "future")
-    .def("fetch", &AsyncFuture::Fetch)
-    .def("try_fetch", &AsyncFuture::TryFetch);
+      .def("fetch", &AsyncFuture::Fetch);
 }
 
 void CreateInferencePybindStateModule(py::module& m) {

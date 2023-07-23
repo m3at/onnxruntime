@@ -228,8 +228,27 @@ class Session:
 
     def run_async(self, output_names, input_feed, run_options=None):
         """
-        [WIP]
+        Compute the predictions asynchronously in a separate thread from intra-op thread pool
+
+        :param output_names: name of the outputs
+        :param input_feed: dictionary ``{ input_name: input_value }``
+        :param run_options: See :class:`onnxruntime.RunOptions`.
+        :return: a future of the async call
+
+        ::
+
+            so = onnxrt.SessionOptions()
+            so.intra_op_num_threads = 2  # so intra op thread pool would have one thread
+            sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), so, providers=available_providers)
+
+            x = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], dtype=np.float32)
+            future = sess.run_async(["Y"], {"X": x})
+            res = future.fetch(False)
+            if len(res) == 0:
+                res = future.fetch(True)
+            # now consume res as an array of outputs
         """
+
         self._validate_input(list(input_feed.keys()))
         if not output_names:
             output_names = [output.name for output in self._outputs_meta]
