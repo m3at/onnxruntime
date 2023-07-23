@@ -554,7 +554,6 @@ class TestInferenceSession(unittest.TestCase):
         np.testing.assert_allclose(output_expected, res[0], rtol=1e-05, atol=1e-08)
 
     def test_run_async(self):
-
         so = onnxrt.SessionOptions()
         so.intra_op_num_threads = 2
         sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), so, providers=available_providers)
