@@ -243,9 +243,9 @@ class Session:
 
             x = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], dtype=np.float32)
             future = sess.run_async(["Y"], {"X": x})
-            res = future.fetch(False)
+            res = future.fetch(False)  # False means no wait
             if len(res) == 0:
-                res = future.fetch(True)
+                res = future.fetch(True)  # True means wait
             # now consume res as an array of outputs
         """
 

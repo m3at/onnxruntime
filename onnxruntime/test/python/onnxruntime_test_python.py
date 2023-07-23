@@ -562,12 +562,12 @@ class TestInferenceSession(unittest.TestCase):
         x = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], dtype=np.float32)
         future = sess.run_async(["Y"], {"X": x})
 
-        print ("\ntest_run_async: try fetching ...")
-        res = future.fetch(False)
+        print("\ntest_run_async: try fetching ...")
+        res = future.fetch(False)  # False means no wait
 
         if len(res) == 0:
             print("test_run_async: try failed, now wait on fetch")
-            res = future.fetch(True)
+            res = future.fetch(True)  # wait
 
         print("test_run_async: fetched")
 
