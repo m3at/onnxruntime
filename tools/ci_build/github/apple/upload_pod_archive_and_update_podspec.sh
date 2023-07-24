@@ -2,6 +2,7 @@
 
 # Note: This script is intended to be called from the iOS CocoaPods package release pipeline or a similar context.
 
+set -e
 set -x
 
 IFS='' read -d '' -r USAGE_TEXT <<USAGE

@@ -1661,6 +1661,11 @@ inline std::vector<OperatorField> GetFields(const DML_ELEMENT_WISE_QUANTIZED_LIN
     };
 }
 
+
+#pragma warning(push)
+#pragma warning(disable:4702)
+#pragma warning(disable:4063)
+
 inline const DML_OPERATOR_SCHEMA& GetSchema(DML_OPERATOR_TYPE operatorType)
 {
     switch (operatorType)
@@ -1840,8 +1845,6 @@ inline const DML_OPERATOR_SCHEMA& GetSchema(DML_OPERATOR_TYPE operatorType)
     }
 }
 
-#pragma warning(push)
-#pragma warning(disable:4702)
 inline AbstractOperatorDesc ConvertOperatorDesc(const DML_OPERATOR_DESC& opDesc)
 {
     switch (static_cast<uint32_t>(opDesc.Type))

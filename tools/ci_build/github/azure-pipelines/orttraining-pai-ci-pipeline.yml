@@ -187,6 +187,9 @@ jobs:
     displayName: 'Run kernel explorer tests'
     condition: succeededOrFailed()
 
+  # Entry point for all ORTModule tests
+  # The onnxruntime folder is deleted in the build directory
+  # to enforce use of the onnxruntime wheel
   - task: CmdLine@2
     inputs:
       script: |-

@@ -2191,6 +2191,12 @@ struct OperatorTypeTraits<(DML_OPERATOR_TYPE)DML_OPERATOR_ACTIVATION_GELU>
 };
 
 template <>
+struct OperatorTypeTraits<(DML_OPERATOR_TYPE)DML_OPERATOR_MULTIHEAD_ATTENTION>
+{
+    using DescType = DML_MULTIHEAD_ATTENTION_OPERATOR_DESC;
+};
+
+template <>
 struct OperatorTypeTraits<(DML_OPERATOR_TYPE)DML_OPERATOR_ELEMENT_WISE_QUANTIZED_LINEAR_ADD1>
 {
     using DescType = DML_ELEMENT_WISE_QUANTIZED_LINEAR_ADD1_OPERATOR_DESC;
@@ -2212,6 +2218,7 @@ struct OperatorTypeTraits<(DML_OPERATOR_TYPE)DML_OPERATOR_MULTIHEAD_ATTENTION>
 //
 #pragma warning(push)
 #pragma warning(disable:4702)
+#pragma warning(disable:4063)
 template <typename Visitor, typename... Ts>
 auto OperatorTypeVisitor(DML_OPERATOR_TYPE type, Visitor&& visitor, Ts&&... args)
 {
@@ -2559,7 +2566,6 @@ auto OperatorTypeVisitor(DML_OPERATOR_TYPE type, Visitor&& visitor, Ts&&... args
         return std::invoke(std::forward<Visitor>(visitor), DML_ACTIVATION_RELU_OPERATOR_DESC{}, std::forward<Ts>(args)...);
     }
 }
-#pragma warning(pop)
 
 
 inline gsl::czstring ToString(DML_OPERATOR_TYPE value)
@@ -2718,3 +2724,6 @@ inline gsl::czstring ToString(DML_OPERATOR_TYPE value)
     }
 }
 }
+
+
+#pragma warning(pop)
