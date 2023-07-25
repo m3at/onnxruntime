@@ -37,6 +37,7 @@ static OpBuilderRegistrations CreateOpBuilderRegistrations() {
     CreateBinaryOpBuilder("Mul", op_registrations);
     CreateBinaryOpBuilder("Div", op_registrations);
     CreateBinaryOpBuilder("Pow", op_registrations);
+    CreateBinaryOpBuilder("PRelu", op_registrations);
   }
 
   {  // Ternary
@@ -44,9 +45,15 @@ static OpBuilderRegistrations CreateOpBuilderRegistrations() {
   }
 
   {  // Activations
-    CreateActivationOpBuilder("Relu", op_registrations);
+    CreateActivationOpBuilder("Elu", op_registrations);
+    CreateActivationOpBuilder("HardSigmoid", op_registrations);
+    CreateActivationOpBuilder("HardSwish", op_registrations);
     CreateActivationOpBuilder("LeakyRelu", op_registrations);
+    CreateActivationOpBuilder("Relu", op_registrations);
     CreateActivationOpBuilder("Sigmoid", op_registrations);
+    CreateActivationOpBuilder("Softplus", op_registrations);
+    CreateActivationOpBuilder("Softsign", op_registrations);
+    CreateActivationOpBuilder("Tanh", op_registrations);
   }
 
   {  // ArgMax/ArgMin
@@ -90,12 +97,18 @@ static OpBuilderRegistrations CreateOpBuilderRegistrations() {
 
   {  // Logical
     CreateLogicalOpBuilder("Equal", op_registrations);
+    CreateLogicalOpBuilder("Greater", op_registrations);
+    CreateLogicalOpBuilder("Less", op_registrations);
   }
 
   {  // Normalization
     CreateNormalizationOpBuilder("GroupNormalization", op_registrations);
     CreateNormalizationOpBuilder("InstanceNormalization", op_registrations);
     CreateNormalizationOpBuilder("LayerNormalization", op_registrations);
+  }
+
+  {  // Pad
+    CreatePadOpBuilder("Pad", op_registrations);
   }
 
   {  // Pool

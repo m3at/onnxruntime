@@ -46,8 +46,7 @@ class UsageError(BaseError):
 
 
 def _check_python_version():
-    # TODO Upgrade this, Python 3.6 is no longer supported. However, some packaging pipelines are still using it.
-    required_minor_version = 6
+    required_minor_version = 7
     if (sys.version_info.major, sys.version_info.minor) < (3, required_minor_version):
         raise UsageError(
             f"Invalid Python version. At least Python 3.{required_minor_version} is required. "
@@ -1788,6 +1787,11 @@ def run_onnxruntime_tests(args, source_dir, ctest_path, build_dir, configs):
 
             if not args.disable_ml_ops and not args.use_tensorrt:
                 run_subprocess([sys.executable, "onnxruntime_test_python_mlops.py"], cwd=cwd, dll_path=dll_path)
+
+            if args.use_tensorrt:
+                run_subprocess(
+                    [sys.executable, "onnxruntime_test_python_nested_control_flow_op.py"], cwd=cwd, dll_path=dll_path
+                )
 
             try:
                 import onnx  # noqa: F401
