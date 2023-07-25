@@ -50,7 +50,7 @@ const createSoftmaxProgramInfo = (input: TensorView, attributes: SoftmaxAttribut
   const getShaderSource = (shaderHelper: ShaderHelper) => `
       var<workgroup> rowMaxShared : ${dataType};
       var<workgroup> rowSumShared : ${dataType};
-      var<workgroup> th_shared : array<${dataType}, ${WG}>;
+      var<workgroup> threadShared : array<${dataType}, ${WG}>;
 
       @group(0) @binding(0) var<storage, read> x : array<${dataType}>;
       @group(0) @binding(1) var<storage, read_write> result : array<${dataType}>;
@@ -81,7 +81,7 @@ const createSoftmaxProgramInfo = (input: TensorView, attributes: SoftmaxAttribut
           threadMax = max(threadMax, value);
         }
         if (lindex < cols) {
-          th_shared[lindex] = threadMax;
+          threadShared[lindex] = threadMax;
         }
         workgroupBarrier();
 
@@ -89,12 +89,12 @@ const createSoftmaxProgramInfo = (input: TensorView, attributes: SoftmaxAttribut
         for (var currSize = reduceSize >> 1;  currSize > 0; currSize = reduceSize >> 1) {
           reduceSize = currSize + (reduceSize & 1);
           if (lindex < currSize) {
-            th_shared[lindex] = max(th_shared[lindex], th_shared[lindex + reduceSize]);
+            threadShared[lindex] = max(threadShared[lindex], threadShared[lindex + reduceSize]);
           }
           workgroupBarrier();
         }
         if (lindex == 0) {
-          rowMaxShared = th_shared[0];
+          rowMaxShared = threadShared[0];
         }
         workgroupBarrier();
 
@@ -104,17 +104,17 @@ const createSoftmaxProgramInfo = (input: TensorView, attributes: SoftmaxAttribut
           let subExp = exp(getValue(row, col, row_stride) - rowMaxShared);
           threadSum += subExp;
         }
-        th_shared[lindex] = threadSum;
+        threadShared[lindex] = threadSum;
         workgroupBarrier();
 
         for (var currSize = wg >> 1;  currSize > 0; currSize = currSize >> 1) {
           if (lindex < currSize) {
-            th_shared[lindex] = th_shared[lindex] + th_shared[lindex + currSize];
+            threadShared[lindex] = threadShared[lindex] + threadShared[lindex + currSize];
           }
           workgroupBarrier();
         }
         if (lindex == 0) {
-          rowSumShared = th_shared[0];
+          rowSumShared = threadShared[0];
         }
         workgroupBarrier();
 
