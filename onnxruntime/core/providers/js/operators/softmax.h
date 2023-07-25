@@ -8,25 +8,35 @@
 
 namespace onnxruntime {
 namespace js {
-#define JSEP_DEFINE_SOFTMAX_KERNEL(SoftmaxKernel)                                                        \
-  template <typename T, bool allow_multi_axes = false>                                                        \
-  class SoftmaxKernel : public JsKernel, public ReduceKernelBase<allow_multi_axes> {                       \
-   public:                                                                                                   \
-    using ReduceKernelBase<allow_multi_axes>::axes_;                                                         \
-    SoftmaxKernel(const OpKernelInfo& info) : JsKernel(info), ReduceKernelBase<allow_multi_axes>(info) {   \
-      std::vector<int32_t> axes(axes_.size());                                                               \
-      if (axes_.size() > 0) {                                                                                \
-        std::transform(axes_.begin(), axes_.end(), axes.begin(),                                             \
-                       [](int64_t axis) { return gsl::narrow_cast<int32_t>(axis); });                        \
-      }                                                                                                      \
-      JSEP_INIT_KERNEL_ATTRIBUTE(SoftmaxKernel, ({                                                         \
-                                   "axes" : $1 ? (Array.from(HEAP32.subarray($4, $4 + $3))) : [],            \
-                                 }),                                                                         \
-                                 gsl::narrow_cast<int32_t>(axes.size()),                                     \
-                                 reinterpret_cast<int32_t>((axes.size() > 0) ? axes.data() : nullptr) >> 2); \
-    }                                                                                                        \
-  };
+template <typename T>
+class Softmax : public JsKernel {
+ public:
+  Softmax(const OpKernelInfo& info) : JsKernel(info) {
+    const auto& node = info.node();
+    opset_ = node.SinceVersion();
 
-JSEP_DEFINE_SOFTMAX_KERNEL(Softmax);
+    int64_t axis;
+    Status status = info.GetAttr<int64_t>("axis", &axis);
+
+    if (status.IsOK()) {
+      axis_ = gsl::narrow_cast<int>(axis);
+    } else {
+      if (opset_ < 13) {
+        axis_ = 1;  // opset-12 and below, the default axis value is 1
+      } else {
+        axis_ = -1;  // opset-13, the default axis value is -1
+      }
+    }
+    JSEP_INIT_KERNEL_ATTRIBUTE(Softmax, ({
+                                 "axis" : $1
+                               }),
+                               axis_);
+  }
+
+ private:
+  int axis_;
+  int opset_;
+};
+
 }  // namespace js
 }  // namespace onnxruntime

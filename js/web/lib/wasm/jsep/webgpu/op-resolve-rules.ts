@@ -9,11 +9,11 @@ import {expand} from './ops/expand';
 import {gemm, parseGemmAttributes} from './ops/gemm';
 import {matMul} from './ops/matmul';
 import * as pool from './ops/pool';
-import {argMax, argMin} from './ops/argminmax';
+import {argMax, argMin, parseArgMinMaxAttributes} from './ops/argminmax';
 import {parseReduceAttributes, reduceL1, reduceL2, reduceLogSum, reduceLogSumExp, reduceMax, reduceMean, reduceMin, reduceProd, reduceSum, reduceSumSquare} from './ops/reduce';
 import {parseSplitAttributes, split} from './ops/split';
 import {parseTransposeAttributes, transpose} from './ops/transpose';
-import {softmax} from './ops/softmax';
+import {softmax, parseSoftmaxAttributes} from './ops/softmax';
 import * as unaryOps from './ops/unary-op';
 import {ComputeContext} from './types';
 
@@ -26,8 +26,8 @@ export const WEBGPU_OP_RESOLVE_RULES: Map<string, OperatorImplementation> = new 
   ['Acos', [unaryOps.acos]],
   ['Acosh', [unaryOps.acosh]],
   ['Add', [binaryOps.add]],
-  ['ArgMax', [argMax, parseReduceAttributes]],
-  ['ArgMin', [argMin, parseReduceAttributes]],
+  ['ArgMax', [argMax, parseArgMinMaxAttributes]],
+  ['ArgMin', [argMin, parseArgMinMaxAttributes]],
   ['Asin', [unaryOps.asin]],
   ['Asinh', [unaryOps.asinh]],
   ['Atan', [unaryOps.atan]],
@@ -75,7 +75,7 @@ export const WEBGPU_OP_RESOLVE_RULES: Map<string, OperatorImplementation> = new 
   ['Sinh', [unaryOps.sinh]],
   ['Split', [split, parseSplitAttributes]],
   ['Sqrt', [unaryOps.sqrt]],
-  ['Softmax', [softmax]],
+  ['Softmax', [softmax, parseSoftmaxAttributes]],
   ['Sub', [binaryOps.sub]],
   ['Tan', [unaryOps.tan]],
   ['Tanh', [unaryOps.tanh]],

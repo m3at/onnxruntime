@@ -5,151 +5,142 @@
 // performance limitations when the reduced axis is long. Need to add
 // a optimized codepath for this.
 
-import {DataType} from '../../../wasm-common';
-import {TensorView} from '../../tensor';
-import {ShapeUtil} from '../../util';
-import {AttributeWithCacheKey, createAttributeWithCacheKey} from '../attribute-with-cache-key';
-import {ComputeContext, GpuDataType, ProgramInfo, ProgramInfoLoader, ProgramMetadata} from '../types';
-
-import {createIndicesHelper, ShaderHelper} from './common';
+import { DataType } from '../../../wasm-common';
+import { ShapeUtil } from '../../util';
+import { TensorView } from '../../tensor';
+import { AttributeWithCacheKey, createAttributeWithCacheKey } from '../attribute-with-cache-key';
+import { ComputeContext, GpuDataType, ProgramInfo } from '../types';
+import { ShaderHelper } from './common';
 
 const validateInputs = (inputs: readonly TensorView[]): void => {
-  if (!inputs || inputs.length === 0 || inputs.length > 2) {
-    throw new Error('Reduce op requires 1 or 2 inputs.');
-  }
-  if (inputs.length === 2 && inputs[1].dims.length !== 1) {
-    throw new Error('Invalid axes input dims.');
+  if (!inputs || inputs.length !== 1) {
+    throw new Error('Softmax op requires 1 input.');
   }
   if (inputs[0].dataType !== DataType.float) {
-    throw new Error('Invalid input type.');
+    throw new Error('Softmax input needs to be float.');
   }
 };
 
-export interface ReduceAttributes extends AttributeWithCacheKey {
-  keepDims: boolean;
-  noopWithEmptyAxes: boolean;
-  axes: number[];
+export interface SoftmaxAttributes extends AttributeWithCacheKey {
+  readonly axis: number;
 }
 
-type SoftmaxOp = (inputs: readonly TensorView[], axes: number[]) => string[];
-
-const noOp: SoftmaxOp = (): string[] => ['', '', 'value = _A[inputIdx];', ''];
-
-const createReduceProgramInfo =
-    (metadata: ProgramMetadata, inputs: readonly TensorView[], attributes: ReduceAttributes,
-     argMinMaxOp: SoftmaxOp): ProgramInfo => {
-      const outputShape: number[] = [];
-      const inputShape = inputs[0].dims;
-
-      const idxCopy: string[] = [];  // copy output indexes to input indexes
-
-      const axes = ShapeUtil.normalizeAxes(attributes.axes, inputs[0].dims.length);
-      const outputDimsLength = inputs[0].dims.length - (attributes.keepDims ? 0 : axes.length);
-      const ops = argMinMaxOp(inputs, axes);
-      const inputIndicesHelper = createIndicesHelper('input', inputShape);
-      const initInputIdx = (ops[1] === '') ? '' : `let inputIdx = ${inputIndicesHelper.i2oExpression('inputIndices')};`;
-      let reduceOps = `
-          let inputIdx = ${inputIndicesHelper.i2oExpression('inputIndices')};
-          ${ops[2]};`;
-      const reduceOnAllAxes = !attributes.noopWithEmptyAxes && attributes.axes.length === 0;
-      for (let k = 0; k < inputs[0].dims.length; k++) {
-        // if this axis is reduced
-        if (reduceOnAllAxes || axes.indexOf(k) >= 0) {
-          if (attributes.keepDims) {
-            outputShape.push(1);
-          }  // else { remove the axis from outputShape; }
-
-          // loop over the d-th axis
-          reduceOps = `for(var j${k}: u32 = 0; j${k} < ${inputs[0].dims[k]}; j${k}++) {
-                            let lastIndex = j${k};
-                            inputIndices[${k}] = lastIndex;
-                            ${reduceOps}
-                          }`;
-        } else {
-          if (outputDimsLength > 1) {
-            idxCopy.push(`inputIndices[${k}] = outputIndices[${outputShape.length}];`);
-          } else {
-            idxCopy.push(`inputIndices[${k}] = outputIndices;`);
-          }
-          outputShape.push(inputs[0].dims[k]);
-        }
-      }
-
-      const outputIndicesHelper = createIndicesHelper('output', outputShape);
-      const outputSize = ShapeUtil.size(outputShape);
-      const dataType = 'f32';
-
-      const getShaderSource = (shaderHelper: ShaderHelper) => `
-          @group(0) @binding(0) var<storage, read> _A : array<${dataType}>;
-          @group(0) @binding(1) var<storage, read_write> output : array<i32>;
-
-          ${outputIndicesHelper.o2iImpl}
-          ${inputIndicesHelper.i2oImpl}
-
-          ${shaderHelper.mainStart()}
-          ${shaderHelper.guardAgainstOutOfBoundsWorkgroupSizes(outputSize)}
-          ${inputIndicesHelper.indicesVariableDeclaration('inputIndices')}
-          ${outputIndicesHelper.indicesVariableDeclaration('outputIndices')}
-          ${outputIndicesHelper.o2iCall('global_idx', 'outputIndices')}
-
-          ${idxCopy.join('\n')}
-          ${ops[0]}       // init ops
-          ${initInputIdx}
-          ${ops[1]}
-          ${reduceOps}
-          ${ops[3]} // final
-          output[global_idx*2] = bestIndex;
-        }`;
-
-      return {
-        ...metadata,
-        getShaderSource,
-        outputs: [{dims: outputShape, dataType: inputs[0].dataType, gpuDataType: GpuDataType.default}],
-        dispatchGroup: () => ({x: Math.ceil(outputSize / 64 /* workgroup size */)})
-      };
-    };
-
-const createReduceAttributesFromInputs =
-    (inputs: readonly TensorView[], attributes: ReduceAttributes): ReduceAttributes => {
-      const axes: number[] = [];
-      if (inputs[1].dims[0] > 0) {
-        inputs[1].getBigInt64Array().forEach(v => axes.push(Number(v)));
-      }
-      return createAttributeWithCacheKey(
-          {axes, keepDims: attributes.keepDims, noopWithEmptyAxes: attributes.noopWithEmptyAxes});
-    };
-
-const createReduceProgramInfoLoader =
-    (inputs: readonly TensorView[], name: string, attributes: ReduceAttributes, reduceOp: SoftmaxOp):
-        ProgramInfoLoader => {
-          const updatedAttributes: ReduceAttributes =
-              inputs.length === 1 ? attributes : createReduceAttributesFromInputs(inputs, attributes);
-          const metadata:
-              ProgramMetadata = {name, inputTypes: [GpuDataType.default], cacheHint: updatedAttributes.cacheKey};
-          return {
-            ...metadata,
-            get: () => createReduceProgramInfo(
-                metadata, [inputs[0]], updatedAttributes,
-                updatedAttributes.noopWithEmptyAxes && updatedAttributes.axes.length === 0 ? noOp : reduceOp)
-          };
-        };
-
-
-export const softmax = (context: ComputeContext, attributes: ReduceAttributes): void => {
-  validateInputs(context.inputs);
-  const softmaxOp: SoftmaxOp = (inputs: TensorView[], axes: number[]): string[] => {
-    const idxZero = [];
-    for (let k = 0; k < inputs[0].dims.length; k++) {
-      if (axes.indexOf(k) >= 0 || axes.length === 0) {
-        idxZero.push(`inputIndices[${k}] = 0;`);  // first element
-      }
-    }
-
-    return [
-      `${idxZero.join('\n')}`,
-      'var value = _A[inputIdx];\nvar bestIndex : i32 = 0;',
-      'if (_A[inputIdx] < value) {value = _A[inputIdx]; bestIndex = i32(lastIndex);} ',
-    ];
-  };
-  context.compute(createReduceProgramInfoLoader(context.inputs, 'Softmax', attributes, softmaxOp), {inputs: [0]});
+export const SoftmaxProgramMetadata = {
+  name: 'Softmax',
+  inputTypes: [GpuDataType.default]
 };
+
+
+const createSoftmaxProgramInfo = (input: TensorView, attributes: SoftmaxAttributes): ProgramInfo => {
+  const dataType = 'f32';
+  const shape = input.dims;
+  const outputSize = ShapeUtil.size(shape);
+  const WG = 64;
+  var axis = attributes.axis;
+  if (axis < 0) {
+    axis = shape.length + axis;
+  }
+  if (axis < shape.length - 1) {
+    throw new Error('softmax only supports last axis for now.');
+  }
+
+  const cols = shape[axis];
+  const rows = outputSize / cols;
+
+  const getShaderSource = (shaderHelper: ShaderHelper) => `
+      var<workgroup> rowMaxShared : ${dataType};
+      var<workgroup> rowSumShared : ${dataType};
+      var<workgroup> th_shared : array<${dataType}, ${WG}>;
+
+      @group(0) @binding(0) var<storage, read> x : array<${dataType}>;
+      @group(0) @binding(1) var<storage, read_write> result : array<${dataType}>;
+
+      fn getValue(row: i32, col: i32, row_stride: i32) -> ${dataType} {
+        let index = row * row_stride + col;
+        return x[index];
+      }
+
+      fn setValue(row: i32, col: i32, row_stride: i32, value: ${dataType}) {
+        let index = row * row_stride + col;
+        result[index] = value;
+      }
+
+      @compute @workgroup_size(${WG}, 1, 1)
+      fn main(@builtin(local_invocation_id) local_id : vec3<u32>, @builtin(global_invocation_id) global_id : vec3u) {
+        let gindex = i32(global_id.x);
+        let lindex = i32(local_id.x);
+        const wg = ${WG};
+        let row = gindex / wg;
+        let cols = ${cols};
+        let row_stride : i32 = ${cols};
+
+        // find the rows max
+        var threadMax = -3.402823e+38f; // 6.2.4 in wgsl spec
+        for (var col = lindex; col < cols; col += wg) {
+          let value = getValue(row, col, row_stride);
+          threadMax = max(threadMax, value);
+        }
+        if (lindex < cols) {
+          th_shared[lindex] = threadMax;
+        }
+        workgroupBarrier();
+
+        var reduceSize = min(cols, wg);
+        for (var currSize = reduceSize >> 1;  currSize > 0; currSize = reduceSize >> 1) {
+          reduceSize = currSize + (reduceSize & 1);
+          if (lindex < currSize) {
+            th_shared[lindex] = max(th_shared[lindex], th_shared[lindex + reduceSize]);
+          }
+          workgroupBarrier();
+        }
+        if (lindex == 0) {
+          rowMaxShared = th_shared[0];
+        }
+        workgroupBarrier();
+
+        // find the rows sum
+        var threadSum = 0.0;
+        for (var col = lindex; col < cols; col += wg) {
+          let subExp = exp(getValue(row, col, row_stride) - rowMaxShared);
+          threadSum += subExp;
+        }
+        th_shared[lindex] = threadSum;
+        workgroupBarrier();
+
+        for (var currSize = wg >> 1;  currSize > 0; currSize = currSize >> 1) {
+          if (lindex < currSize) {
+            th_shared[lindex] = th_shared[lindex] + th_shared[lindex + currSize];
+          }
+          workgroupBarrier();
+        }
+        if (lindex == 0) {
+          rowSumShared = th_shared[0];
+        }
+        workgroupBarrier();
+
+        // calculate final value for each element in the row
+        for (var col = lindex; col < cols; col += wg) {
+          let value = exp(getValue(row, col, row_stride) - rowMaxShared) / rowSumShared;
+          setValue(row, col, row_stride, value);
+        }
+      }`;
+  return {
+    ...SoftmaxProgramMetadata,
+    outputs: [{ dims: shape, dataType: input.dataType, gpuDataType: GpuDataType.default }],
+    getShaderSource,
+    dispatchGroup: () => ({ x: rows })
+  };
+};
+
+
+export const softmax = (context: ComputeContext, attributes: SoftmaxAttributes): void => {
+  validateInputs(context.inputs);
+  context.compute({
+    ...SoftmaxProgramMetadata,
+    cacheHint: attributes.cacheKey,
+    get: () => createSoftmaxProgramInfo(context.inputs[0], attributes)
+  });
+};
+
+export const parseSoftmaxAttributes = (attributes: Record<string, unknown>): SoftmaxAttributes =>
+  createAttributeWithCacheKey({ axis: attributes.axis as number });

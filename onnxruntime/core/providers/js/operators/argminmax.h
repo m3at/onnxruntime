@@ -27,7 +27,7 @@ namespace js {
                                    "axes" : $3 ? (Array.from(HEAP32.subarray($4, $4 + $3))) : [],            \
                                  }),                                                                         \
                                  static_cast<int32_t>(keepdims_),                                            \
-                                 static_cast<int32_t>(select_last_index_),                                \
+                                 static_cast<int32_t>(select_last_index_),                                   \
                                  gsl::narrow_cast<int32_t>(axes.size()),                                     \
                                  reinterpret_cast<int32_t>((axes.size() > 0) ? axes.data() : nullptr) >> 2); \
     }                                                                                                        \
