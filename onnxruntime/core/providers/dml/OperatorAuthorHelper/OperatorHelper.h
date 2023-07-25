@@ -1452,38 +1452,6 @@ private:
     std::vector<int32_t> m_qkvHiddenSizes;
 };
 
-class MultiHeadAttentionHelper
-{
-public:
-    template <typename Info_t, typename Shape_t>
-    MultiHeadAttentionHelper(const Info_t& info, const Shape_t& shapeInfo)
-    {
-        Initialize(KernelInformationAdapter(info));
-    }
-
-    std::vector<EdgeShapes> GetOutputShapes(const MLShapeInferenceContext& shapeInfo) const;
-
-private:
-    void Initialize(const IKernelInformationAdapter& kernelInformation);
-    uint32_t m_numHeads;
-};
-
-class AttentionHelper
-{
-public:
-    template <typename Info_t, typename Shape_t>
-    AttentionHelper(const Info_t& info, const Shape_t& shapeInfo)
-    {
-        Initialize(KernelInformationAdapter(info));
-    }
-
-    std::vector<EdgeShapes> GetOutputShapes(const MLShapeInferenceContext& shapeInfo) const;
-
-private:
-    void Initialize(const IKernelInformationAdapter& kernelInformation);
-    std::vector<int32_t> m_qkvHiddenSizes;
-};
-
 class SkipLayerNormHelper
 {
 public:
