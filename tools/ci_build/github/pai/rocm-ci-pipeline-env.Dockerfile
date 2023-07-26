@@ -11,7 +11,7 @@ ENV LANG C.UTF-8
 WORKDIR /stage
 
 ADD scripts /tmp/scripts
-RUN /tmp/scripts/install_os_deps.sh && rm -rf /tmp/scripts
+RUN /tmp/scripts/install_os_deps.sh -p /usr/local && rm -rf /tmp/scripts
 
 # from rocm/pytorch's image, work around ucx's dlopen replacement conflicting with shared provider
 RUN cd /opt/mpi_install/ucx/build &&\
