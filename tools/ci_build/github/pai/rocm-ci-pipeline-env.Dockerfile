@@ -1,6 +1,9 @@
 FROM rocm/cupy:rocm5.5.0_ubuntu20.04_py3.8_pytorch2.0.0_cupy13.0.0
 
-RUN apt-get update -y && apt-get upgrade -y && apt-get autoremove -y && apt-get clean -y
+
+RUN apt-get update -y && apt-get upgrade -y && apt-get autoremove -y libprotobuf\* protobuf-compiler\* && apt-get clean -y
+ADD scripts /tmp/scripts
+RUN cd /tmp/scripts && /tmp/scripts/manylinux/install_deps.sh && rm -rf /tmp/scripts
 
 WORKDIR /stage
 
