@@ -95,15 +95,11 @@ def _build_aar(args):
     exe_dir = os.path.join(intermediates_dir, "executables", build_config)
     base_build_command = [sys.executable, BUILD_PY] + build_settings["build_params"] + ["--config=" + build_config]
     header_files_path = ""
-    
+
     # Build binary for each ABI, one by one
     for abi in build_settings["build_abis"]:
         abi_build_dir = os.path.join(intermediates_dir, abi)
-        abi_build_command = [
-            *base_build_command,
-            "--android_abi=" + abi,
-            "--build_dir=" + abi_build_dir
-        ]
+        abi_build_command = [*base_build_command, "--android_abi=" + abi, "--build_dir=" + abi_build_dir]
 
         if ops_config_path is not None:
             abi_build_command += ["--include_ops_by_config=" + ops_config_path]
