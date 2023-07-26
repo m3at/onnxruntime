@@ -2,6 +2,10 @@
 // Licensed under the MIT License.
 #ifdef ENABLE_TRAINING_TORCH_INTEROP
 
+#include <iostream>
+#include <chrono>
+#include <thread>
+
 #include "orttraining/core/framework/torch/python_common.h"
 #ifndef SHARED_PROVIDER
 #include "core/framework/op_kernel_context_internal.h"
@@ -14,6 +18,18 @@ using namespace onnxruntime::language_interop_ops::torch;
 
 namespace onnxruntime {
 namespace contrib {
+
+namespace {
+
+std::string GetInvokeIdString(const void* ptr) {
+  const auto now = std::chrono::high_resolution_clock::now();
+  std::ostringstream oss;
+  oss << std::this_thread::get_id() << "-"
+      << std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+      << "-" << std::rand() % 1000000 << "-" << reinterpret_cast<uint64_t>(ptr);
+  return oss.str();
+}
+}  // namespace
 
 std::vector<OrtValue> CreateOrtValueArgs(OpKernelContext* context,
                                          const size_t begin_index,
@@ -82,6 +98,8 @@ void PythonOpBase::Init(const OpKernelInfo& info) {
 
   CreateConstArgs();
   CreateArgPositions();
+
+  kernel_invoke_id_ = GetInvokeIdString(this);
 }
 
 void PythonOpBase::Clear() {
@@ -111,7 +129,8 @@ void PythonOpBase::RunForward(OpKernelContext* context,
       diff_ctx,
       returned_ortvalues,
       is_training_mode_,
-      inplace_ != 0);
+      inplace_ != 0,
+      kernel_invoke_id_);
 
   ORT_ENFORCE(1 + returned_ortvalues.size() == static_cast<size_t>(context->OutputCount()),
               "Output count mismatch for PythonOp run");
@@ -244,6 +263,8 @@ void PythonOpGradBase::Init(const OpKernelInfo& info) {
               "backward tensor output count mismatch");
 
   SetPositions();
+
+  kernel_invoke_id_ = GetInvokeIdString(this);
 }
 
 void PythonOpGradBase::RunBackward(OpKernelContext* context,
@@ -265,7 +286,8 @@ void PythonOpGradBase::RunBackward(OpKernelContext* context,
       const_args,
       const_arg_positions_,
       returned_ortvalues,
-      inplace_ != 0);
+      inplace_ != 0,
+      kernel_invoke_id_);
 
   OrtTorchFunctionPool::GetInstance().UnregisterContext(*context_index_ptr);
 }

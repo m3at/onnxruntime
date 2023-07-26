@@ -28,7 +28,8 @@ class PythonOpBase {
     Init(info);
   }
 
-  void Init(const OpKernelInfo& info);
+  void
+  Init(const OpKernelInfo& info);
 
   void RunForward(OpKernelContext* context,
                   void** diff_ctx,
@@ -154,6 +155,8 @@ class PythonOpBase {
 
   void SetContextOutput(OpKernelContext* context, void* diff_ctx) const;
   void SetOtherOutputs(OpKernelContext* context, std::vector<OrtValue>& returned_args) const;
+
+  std::string kernel_invoke_id_;
 };
 
 class PythonOpGradBase {
@@ -185,6 +188,8 @@ class PythonOpGradBase {
 
  private:
   void SetPositions();
+
+  std::string kernel_invoke_id_;
 };
 
 }  // namespace contrib
