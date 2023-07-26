@@ -1,9 +1,8 @@
-FROM rocm/pytorch:rocm5.5_ubuntu20.04_py3.8_pytorch_1.13.1
+FROM rocm/cupy:rocm5.5.0_ubuntu20.04_py3.8_pytorch2.0.0_cupy13.0.0
 
-ARG BUILD_UID=1001
-ARG BUILD_USER=onnxruntimedev
-RUN adduser --uid $BUILD_UID $BUILD_USER
-WORKDIR /home/$BUILD_USER
+RUN apt-get update -y && apt-get upgrade -y && apt-get autoremove -y && apt-get clean -y
+
+WORKDIR /stage
 
 # from rocm/pytorch's image, work around ucx's dlopen replacement conflicting with shared provider
 RUN cd /opt/mpi_install/ucx/build &&\
@@ -25,7 +24,7 @@ RUN mkdir -p /tmp/ccache && \
     cp /tmp/ccache/ccache /usr/bin && \
     rm -rf /tmp/ccache
 
-USER $BUILD_USER
+RUN apt-get update && apt-get install  -y cifs-utils
 
 # rocm-ci branch contains instrumentation needed for loss curves and perf
 RUN git clone https://github.com/microsoft/huggingface-transformers.git &&\
@@ -55,3 +54,8 @@ RUN pip install \
 
 RUN pip install torch-ort --no-dependencies
 ENV ORTMODULE_ONNX_OPSET_VERSION=15
+
+ARG BUILD_UID=1001
+ARG BUILD_USER=onnxruntimedev
+RUN adduser --uid $BUILD_UID $BUILD_USER
+WORKDIR /home/$BUILD_USER
