@@ -57,8 +57,9 @@ else
   unzip absl_src.zip
   cd *
 fi
-
-cmake "."  "-DABSL_PROPAGATE_CXX_STD=ON" "-DCMAKE_BUILD_TYPE=Release" "-DBUILD_TESTING=OFF" "-DABSL_USE_EXTERNAL_GOOGLETEST=ON" "-DCMAKE_PREFIX_PATH=$install_prefix" "-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX" $EXTRA_CMAKE_ARGS
+GCC_PATH=$(which gcc)
+GPLUSPLUS_PATH=$(which g++)
+CC=$GCC_PATH CXX=$GPLUSPLUS_PATH cmake "."  "-DABSL_PROPAGATE_CXX_STD=ON" "-DCMAKE_BUILD_TYPE=Release" "-DBUILD_TESTING=OFF" "-DABSL_USE_EXTERNAL_GOOGLETEST=ON" "-DCMAKE_PREFIX_PATH=$install_prefix" "-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX" $EXTRA_CMAKE_ARGS
 if [ -x "$(command -v ninja)" ]; then
   ninja
   ninja install
@@ -66,6 +67,7 @@ else
   make -j$(getconf _NPROCESSORS_ONLN)
   make install
 fi
+
 
 echo "Installing protobuf ..."
 protobuf_url=$(grep '^protobuf' $DEP_FILE_PATH | cut -d ';' -f 2 )
@@ -81,7 +83,7 @@ else
   cd protobuf-*
 fi
 
-cmake . -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -Dprotobuf_WITH_ZLIB_DEFAULT=OFF -Dprotobuf_BUILD_SHARED_LIBS=OFF -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX $EXTRA_CMAKE_ARGS -Dprotobuf_ABSL_PROVIDER=package
+CC=$GCC_PATH CXX=$GPLUSPLUS_PATH cmake . -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -Dprotobuf_WITH_ZLIB_DEFAULT=OFF -Dprotobuf_BUILD_SHARED_LIBS=OFF -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX $EXTRA_CMAKE_ARGS -Dprotobuf_ABSL_PROVIDER=package
 if [ -x "$(command -v ninja)" ]; then
   ninja
   ninja install
