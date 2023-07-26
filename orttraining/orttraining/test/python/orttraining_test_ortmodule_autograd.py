@@ -780,6 +780,64 @@ def test_two_outputs_function():
     run_training_test_and_compare(model_builder, input_generator, label_input)
 
 
+@pytest.mark.skipif(
+    torch_version_lower_than("1.10.0"),
+    reason="PyTorch older than 1.10.0 has bugs for exporting multiple output custom function",
+)
+@pytest.mark.parametrize("materialize_grad", [True])
+def test_two_outputs_function_with_no_grad_output(materialize_grad):
+    class TwoOutputsFunctionWithNoGradOutput(torch.autograd.Function):
+        @staticmethod
+        def forward(ctx, x, y):
+            ctx.save_for_backward(x, y)
+            w = x + y
+            z = x * y
+            ctx.set_materialize_grads(materialize_grad)
+            return w, z
+
+        @staticmethod
+        def backward(ctx, dw, dz):
+            x, y = ctx.saved_tensors
+            print(dw, dz)
+            # if materialize_grad:
+            #     assert dw is not None
+            #     assert dz is not None
+            # else:
+            #     assert dw is None
+            #     assert dz is not None
+            dx = dz * y
+            dy = dz * x
+            return dx, dy
+
+    class TwoOutputsFunctionWithNoGradOutputModel(torch.nn.Module):
+        def __init__(self, output_size):
+            super().__init__()
+            self.fun = TwoOutputsFunctionWithNoGradOutput.apply
+            self.bias = Parameter(torch.empty(output_size, device=torch.cuda.current_device(), dtype=torch.float))
+
+            with torch.no_grad():
+                self.bias.uniform_()
+
+        def forward(self, x):
+            # Be noted, the first output is not used in backward, so it should not require grad.
+            _, b = self.fun(x, self.bias)
+            return b
+
+    output_size = 2
+
+    def model_builder():
+        return TwoOutputsFunctionWithNoGradOutputModel(output_size)
+
+    def input_generator():
+        return torch.randn(output_size, dtype=torch.float)
+
+    # generate a label that have same shape as forward output.
+    label_input = torch.ones([output_size])
+
+    # Test multi-input and multi-output custom function.
+    run_training_test_and_compare(model_builder, input_generator, label_input)  # noqa: F405
+
+
 def test_inner_module_call():
     class InnerModel(torch.nn.Module):
         def __init__(self, dim, device):

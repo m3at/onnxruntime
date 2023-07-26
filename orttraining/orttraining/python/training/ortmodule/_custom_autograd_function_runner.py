@@ -251,7 +251,8 @@ def call_python_backward_function(
             # Prepare inputs for calling Python function.
             wrapped_args = []
             for grad_flag, tensor_flag, arg in zip(requires_grad_flags, tensor_type_flags, args):
-                if tensor_flag:
+                # If an input is a tensor, it is possible we get a None also when it is optional as grad input.
+                if tensor_flag and arg is not None:
                     # Assume it's a DLPack tensor# and convert it to Pytorch tensor.
                     wrapped_arg = from_dlpack(arg)
 
