@@ -27,12 +27,12 @@ mp11;https://github.com/boostorg/mp11/archive/refs/tags/boost-1.79.0.zip;c8f04e3
 onnx;https://github.com/onnx/onnx/archive/refs/tags/v1.14.0.zip;3c6e43a36f94addc15afe939860127a1d74a9488
 #use the last commit of 8.6-GA branch (https://github.com/onnx/onnx-tensorrt/commit/6ba67d3428e05f690145373ca87fb8d32f98df45)
 onnx_tensorrt;https://github.com/onnx/onnx-tensorrt/archive/6ba67d3428e05f690145373ca87fb8d32f98df45.zip;805902b4f03f09f07151e03b5ccc49968c9cc896
-protobuf;https://github.com/protocolbuffers/protobuf/archive/refs/tags/v23.4.zip;b40229de1fbf34749f55bdc94a4c8313c1a1b33b
-protoc_win64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-win64.zip;e1ee244b44c2a5ca8cef049edb81cdc7ef8e438e
-protoc_win32;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-win32.zip;0a6cca705ef1b7ba31568fa22b5f7051ce05c8bd
-protoc_linux_x64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-x86_64.zip;3fbdee89386f238fdeb9d991723030513ea2b612
-protoc_linux_x86;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-x86_32.zip;7f84899faea897df0b316e8efddb89f45f7ca1bd
-protoc_linux_aarch64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-aarch_64.zip;ee6440cae6fdfb338f402fa0a4e3fb241ec59bb2
+protobuf;https://github.com/protocolbuffers/protobuf/archive/refs/tags/v23.4.zip;b45a39176589d5dce5ad3267bd01de1ea3874496
+protoc_win64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-win64.zip;8d63852dd2c0c7f75f0f3a01d79cc271594292d5
+protoc_win32;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-win32.zip;16494332c3a915dc51e8cafb188f8051da3d2272
+protoc_linux_x64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-x86_64.zip;1faf3c1415522ca20196b802e313fd046fc47cfa
+protoc_linux_x86;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-x86_32.zip;5bc1af100dcedaff1143b5bc058840c450da3ce4
+protoc_linux_aarch64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-aarch_64.zip;25705aec89d0fb3736f4a410bb1d8f8c0d7dcc30
 psimd;https://github.com/Maratyszcza/psimd/archive/072586a71b55b7f8c584153d223e95687148a900.zip;1f5454b01f06f9656b77e4a5e2e31d7422487013
 pthreadpool;https://github.com/Maratyszcza/pthreadpool/archive/1787867f6183f056420e532eec640cba25efafea.zip;e43e80781560c5ab404a4da20f34d846f5f5d101
 pybind11;https://github.com/pybind/pybind11/archive/refs/tags/v2.10.1.zip;769b6aa67a77f17a770960f604b727645b6f6a13
