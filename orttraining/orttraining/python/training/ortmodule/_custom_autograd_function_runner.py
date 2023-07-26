@@ -27,7 +27,7 @@ def call_python_forward_function(
     tensor_type_flags: List[int],
     is_training_mode: bool,
     inplace: bool,
-    kernel_invoke_id: int,
+    kernel_invoke_id: str,
     *args,
 ):
     """
@@ -214,7 +214,7 @@ def call_python_backward_function(
     tensor_type_flags: List[int],
     is_training_mode: bool,
     inplace: bool,
-    kernel_invoke_id: int,
+    kernel_invoke_id: str,
     *args,
 ):
     """
