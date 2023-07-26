@@ -1,11 +1,17 @@
 FROM rocm/cupy:rocm5.5.0_ubuntu20.04_py3.8_pytorch2.0.0_cupy13.0.0
 
 
-RUN apt-get update -y && apt-get upgrade -y && apt-get autoremove -y libprotobuf\* protobuf-compiler\* && apt-get clean -y && rm -f /usr/local/bin/protoc
-ADD scripts /tmp/scripts
-RUN cd /tmp/scripts && /tmp/scripts/manylinux/install_deps.sh && rm -rf /tmp/scripts
+RUN apt-get update -y && apt-get upgrade -y && apt-get autoremove -y libprotobuf\* protobuf-compiler\* && \
+    rm -f /usr/local/bin/protoc && apt-get install -y locales unzip && apt-get clean -y
+RUN locale-gen en_US.UTF-8
+RUN update-locale LANG=en_US.UTF-8
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
 
 WORKDIR /stage
+
+ADD scripts /tmp/scripts
+RUN /tmp/scripts/install_os_deps.sh && rm -rf /tmp/scripts
 
 # from rocm/pytorch's image, work around ucx's dlopen replacement conflicting with shared provider
 RUN cd /opt/mpi_install/ucx/build &&\
