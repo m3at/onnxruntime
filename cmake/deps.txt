@@ -33,6 +33,7 @@ protoc_win32;https://github.com/protocolbuffers/protobuf/releases/download/v23.4
 protoc_linux_x64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-x86_64.zip;1faf3c1415522ca20196b802e313fd046fc47cfa
 protoc_linux_x86;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-x86_32.zip;5bc1af100dcedaff1143b5bc058840c450da3ce4
 protoc_linux_aarch64;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-aarch_64.zip;25705aec89d0fb3736f4a410bb1d8f8c0d7dcc30
+protoc_mac_universal;https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-osx-universal_binary.zip;f50dd324d8da1e94cff26510d5a9f5fc3f78a461
 psimd;https://github.com/Maratyszcza/psimd/archive/072586a71b55b7f8c584153d223e95687148a900.zip;1f5454b01f06f9656b77e4a5e2e31d7422487013
 pthreadpool;https://github.com/Maratyszcza/pthreadpool/archive/1787867f6183f056420e532eec640cba25efafea.zip;e43e80781560c5ab404a4da20f34d846f5f5d101
 pybind11;https://github.com/pybind/pybind11/archive/refs/tags/v2.10.1.zip;769b6aa67a77f17a770960f604b727645b6f6a13
@@ -43,3 +44,4 @@ tensorboard;https://github.com/tensorflow/tensorboard/archive/373eb09e4c5d2b3cc2
 cutlass;https://github.com/NVIDIA/cutlass/archive/refs/tags/v3.0.0.zip;0f95b3c1fc1bd1175c4a90b2c9e39074d1bccefd
 utf8_range;https://github.com/protocolbuffers/utf8_range/archive/72c943dea2b9240cd09efde15191e144bc7c7d38.zip;9925739c9debc0efa2adcb194d371a35b6a03156
 extensions;https://github.com/microsoft/onnxruntime-extensions/archive/94142d8391c9791ec71c38336436319a2d4ac7a0.zip;4365ac5140338b4cb75a39944a4be276e3829b3c
+manylinux;https://github.com/pypa/manylinux/archive/5eda9aded5462201e6310105728d33016e637ea7.tar.gz;d07b6fedb77e3ec5c8b2fcae7fbf394368e374db

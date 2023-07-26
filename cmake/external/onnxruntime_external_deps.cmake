@@ -19,9 +19,7 @@ endforeach()
 
 message("Loading Dependencies ...")
 # ABSL should be included before protobuf because protobuf may use absl
-if(NOT onnxruntime_DISABLE_ABSEIL)
-  include(external/abseil-cpp.cmake)
-endif()
+include(external/abseil-cpp.cmake)
 
 set(RE2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 if(Patch_FOUND)
@@ -45,10 +43,7 @@ if (onnxruntime_BUILD_UNIT_TESTS)
     set(gtest_disable_pthreads ON)
   endif()
   set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-  if(NOT onnxruntime_DISABLE_ABSEIL)
-    # It uses both ABSL and re2
-    set(GTEST_HAS_ABSL OFF CACHE BOOL "" FORCE)
-  endif()
+  set(GTEST_HAS_ABSL OFF CACHE BOOL "" FORCE)
   # gtest and gmock
   FetchContent_Declare(
     googletest
