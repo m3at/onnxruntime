@@ -35,10 +35,38 @@ case "$(uname -s)" in
     export CFLAGS
     export CXXFLAGS
     ;;
-   *)
-    exit 1
+    *)
+      exit -1
 esac
 mkdir -p $INSTALL_PREFIX
+
+EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CXX_STANDARD=17"
+if [ -x "$(command -v ninja)" ]; then
+  EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -G Ninja"
+fi
+echo "Installing abseil ..."
+absl_url=$(grep '^abseil_cpp' $DEP_FILE_PATH | cut -d ';' -f 2 )
+if [[ "$absl_url" = https* ]]; then
+  absl_url=$(echo $absl_url | sed 's/\.zip$/\.tar.gz/')
+  curl -sSL --retry 5 --retry-delay 10 --create-dirs --fail -L -o absl_src.tar.gz $absl_url
+  mkdir abseil
+  cd abseil
+  tar -zxf ../absl_src.tar.gz --strip=1
+else
+  cp $absl_url absl_src.zip
+  unzip absl_src.zip
+  cd *
+fi
+
+cmake "."  "-DABSL_PROPAGATE_CXX_STD=ON" "-DCMAKE_BUILD_TYPE=Release" "-DBUILD_TESTING=OFF" "-DABSL_USE_EXTERNAL_GOOGLETEST=ON" "-DCMAKE_PREFIX_PATH=$install_prefix" "-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX" $EXTRA_CMAKE_ARGS
+if [ -x "$(command -v ninja)" ]; then
+  ninja
+  ninja install
+else
+  make -j$(getconf _NPROCESSORS_ONLN)
+  make install
+fi
+
 echo "Installing protobuf ..."
 protobuf_url=$(grep '^protobuf' $DEP_FILE_PATH | cut -d ';' -f 2 )
 if [[ "$protobuf_url" = https* ]]; then
@@ -53,7 +81,12 @@ else
   cd protobuf-*
 fi
 
-cmake . -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -Dprotobuf_WITH_ZLIB_DEFAULT=OFF -Dprotobuf_BUILD_SHARED_LIBS=OFF $EXTRA_CMAKE_ARGS
-make -j$(getconf _NPROCESSORS_ONLN)
-make install
+cmake . -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -Dprotobuf_WITH_ZLIB_DEFAULT=OFF -Dprotobuf_BUILD_SHARED_LIBS=OFF -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX $EXTRA_CMAKE_ARGS -Dprotobuf_ABSL_PROVIDER=package
+if [ -x "$(command -v ninja)" ]; then
+  ninja
+  ninja install
+else
+  make -j$(getconf _NPROCESSORS_ONLN)
+  make install
+fi
 cd ..
