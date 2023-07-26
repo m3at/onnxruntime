@@ -39,6 +39,15 @@ def call_python_forward_function(
     The major difference between call_python_forward_function and call_python_backward_function is that
     in the forward one, we have extra code to process autograd context from Pytorch.
 
+    For the tensors generated from ORT backend, there is a special handling here:
+    1. For the first time run for the kernel (the uniqueness of the kernel is defined by kernel_invoke_id),
+      all such tensors will be cloned in case they are saved in context (but ORT backend is not aware of the
+      reference, may release the content of the tensor before it is really need in backward). Once
+      `autograd.Function.apply` completes, by check the existence of the tensor in the saved_tensors,
+      `INPUT_TENSOR_TO_SAVE_IN_CTX` is updated to save the input indices that are saved in context.
+    2. For the subsequent runs, if the input index is in `INPUT_TENSOR_TO_SAVE_IN_CTX`, the tensor will be cloned
+      before fed into `autograd.Function.apply` as input.
+
     Args:
         forward_function: pointer to autograd.Function.apply (e.g., MyReLU.apply).
         requires_grad_flags: requires_grad_flags[i] indicates if the i-th arg needs gradient.
