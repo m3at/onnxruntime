@@ -1,28 +1,49 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 4dd56b6e..4ff00851 100644
+index 4dd56b6e..7f3a0f08 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -130,7 +130,6 @@ if(ONNX_BUILD_TESTS)
+@@ -130,7 +130,23 @@ if(ONNX_BUILD_TESTS)
    include(googletest)
  endif()
  
 -if((ONNX_USE_LITE_PROTO AND TARGET protobuf::libprotobuf-lite) OR ((NOT ONNX_USE_LITE_PROTO) AND TARGET protobuf::libprotobuf))
++if(NOT abseil_cpp_POPULATED)
++  FetchContent_Declare(
++    abseil_cpp
++    URL https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.zip
++    FIND_PACKAGE_ARGS NAMES absl
++  )
++  FetchContent_MakeAvailable(absl)
++endif()
++
++if(NOT Protobuf_POPULATED)
++  FetchContent_Declare(
++    Protobuf
++    URL https://github.com/protocolbuffers/protobuf/archive/refs/tags/v23.4.zip
++    FIND_PACKAGE_ARGS NAMES protobuf
++  )
++  FetchContent_MakeAvailable(protobuf)
++endif()
    # Sometimes we need to use protoc compiled for host architecture while linking
    # libprotobuf against target architecture. See https://github.com/caffe2/caffe
    # 2/blob/96f35ad75480b25c1a23d6e9e97bccae9f7a7f9c/cmake/ProtoBuf.cmake#L92-L99
-@@ -140,7 +139,7 @@ if((ONNX_USE_LITE_PROTO AND TARGET protobuf::libprotobuf-lite) OR ((NOT ONNX_USE
+@@ -140,45 +156,8 @@ if((ONNX_USE_LITE_PROTO AND TARGET protobuf::libprotobuf-lite) OR ((NOT ONNX_USE
    else()
      set(ONNX_PROTOC_EXECUTABLE $<TARGET_FILE:protobuf::protoc>)
    endif()
 -else()
-+
-   # Customized version of find Protobuf. We need to avoid situations mentioned
-   # in https://github.com/caffe2/caffe2/blob/b7d983f255ef5496474f1ea188edb5e0ac4
-   # 42761/cmake/ProtoBuf.cmake#L82-L92 The following section is stolen from
-@@ -153,32 +152,9 @@ else()
-   # assume that protoc is installed at PREFIX/bin. We use get_filename_component
-   # to resolve PREFIX.
-   if(Protobuf_PROTOC_EXECUTABLE)
+-  # Customized version of find Protobuf. We need to avoid situations mentioned
+-  # in https://github.com/caffe2/caffe2/blob/b7d983f255ef5496474f1ea188edb5e0ac4
+-  # 42761/cmake/ProtoBuf.cmake#L82-L92 The following section is stolen from
+-  # cmake/ProtoBuf.cmake in Caffe2
+-  find_program(Protobuf_PROTOC_EXECUTABLE
+-               NAMES protoc
+-               DOC "The Google Protocol Buffers Compiler")
+-
+-  # Only if protoc was found, seed the include directories and libraries. We
+-  # assume that protoc is installed at PREFIX/bin. We use get_filename_component
+-  # to resolve PREFIX.
+-  if(Protobuf_PROTOC_EXECUTABLE)
 -    set(ONNX_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
 -    get_filename_component(_PROTOBUF_INSTALL_PREFIX
 -                           ${Protobuf_PROTOC_EXECUTABLE} DIRECTORY)
@@ -47,14 +68,14 @@ index 4dd56b6e..4ff00851 100644
 -              PATHS ${_PROTOBUF_INSTALL_PREFIX}/include
 -              NO_DEFAULT_PATH)
 -    find_package(Protobuf REQUIRED)
-+    find_package(protobuf REQUIRED CONFIG)
-+    find_package(absl REQUIRED CONFIG)
-   endif()
+-  endif()
 -endif()
++
++
  
  # Build the libraries with -fPIC
  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-@@ -397,6 +373,7 @@ if (MSVC)
+@@ -397,6 +376,7 @@ if (MSVC)
    endif()
  else()
    # On non-Windows, hide all symbols we don't need
@@ -62,7 +83,7 @@ index 4dd56b6e..4ff00851 100644
    set(ONNX_API_DEFINE "-DONNX_API=__attribute__\(\(__visibility__\(\"default\"\)\)\)")
    set_target_properties(onnx_proto PROPERTIES CXX_VISIBILITY_PRESET hidden)
    set_target_properties(onnx_proto PROPERTIES VISIBILITY_INLINES_HIDDEN 1)
-@@ -495,7 +472,40 @@ if(BUILD_ONNX_PYTHON)
+@@ -495,7 +475,40 @@ if(BUILD_ONNX_PYTHON)
    target_link_libraries(onnx_cpp2py_export PRIVATE onnx)
  
    if(MSVC)
@@ -104,7 +125,7 @@ index 4dd56b6e..4ff00851 100644
      target_compile_options(onnx_cpp2py_export
                             PRIVATE /MP
                                     /wd4244 # 'argument': conversion from 'google::
-@@ -548,20 +558,9 @@ endif()
+@@ -548,20 +561,9 @@ endif()
  if(MSVC)
    target_compile_options(onnx_proto
                           PRIVATE /MP
@@ -125,7 +146,7 @@ index 4dd56b6e..4ff00851 100644
                                   ${EXTRA_FLAGS})
    if(ONNX_USE_PROTOBUF_SHARED_LIBS)
        target_compile_options(onnx_proto
-@@ -614,15 +613,6 @@ configure_file(
+@@ -614,15 +616,6 @@ configure_file(
    ${PROJECT_SOURCE_DIR}/cmake/ONNXConfig.cmake.in
    ${PROJECT_BINARY_DIR}/ONNXConfig.cmake
    @ONLY)
