@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 4dd56b6e..87a3b8cd 100644
+index 4dd56b6e..f4068a3d 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -26,7 +26,7 @@ option(ONNX_BUILD_TESTS "Build ONNX C++ APIs Tests" OFF)
@@ -20,17 +20,17 @@ index 4dd56b6e..87a3b8cd 100644
 +  FetchContent_Declare(
 +    abseil_cpp
 +    URL https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.zip
-+    URL_HASH 9fdc3e68db241076d6d9c485bab1622fcc832f9c
++    URL_HASH SHA1=9fdc3e68db241076d6d9c485bab1622fcc832f9c
 +    FIND_PACKAGE_ARGS NAMES absl
 +  )
-+  FetchContent_MakeAvailable(absl)
++  FetchContent_MakeAvailable(abseil_cpp)
 +endif()
 +
 +if(NOT Protobuf_POPULATED)
 +  FetchContent_Declare(
 +    Protobuf
 +    URL https://github.com/protocolbuffers/protobuf/archive/refs/tags/v23.4.zip
-+    URL_HASH b45a39176589d5dce5ad3267bd01de1ea3874496
++    URL_HASH SHA1=b45a39176589d5dce5ad3267bd01de1ea3874496
 +    FIND_PACKAGE_ARGS NAMES protobuf
 +  )
 +  FetchContent_MakeAvailable(protobuf)
