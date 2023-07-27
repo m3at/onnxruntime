@@ -3787,6 +3787,17 @@ Return true if all elements are true and false otherwise.
           "input_tensor_ranks",
           "Input tensors' ranks of autograd.Function.apply.",
           AttributeProto::INTS)
+      // Input bool scalars.
+      .Attr(
+          "input_bool_scalars",
+          "Python int arguments.",
+          AttributeProto::INTS,
+          false)
+      .Attr(
+          "input_bool_scalar_positions",
+          "",
+          AttributeProto::INTS,
+          false)
       // Input int scalars.
       .Attr(
           "input_int_scalars",

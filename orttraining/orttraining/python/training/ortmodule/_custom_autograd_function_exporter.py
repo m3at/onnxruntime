@@ -76,6 +76,9 @@ def _export_pt_1_10(g, n, *args, **kwargs):
         input_tensor_types = []
         input_tensor_ranks = []
 
+        input_bool_scalars = []
+        input_bool_scalar_positions = []
+
         input_int_scalars = []
         input_int_scalar_positions = []
 
@@ -110,6 +113,11 @@ def _export_pt_1_10(g, n, *args, **kwargs):
                     # A float.
                     input_float_scalar_positions.append(i)
                     input_float_scalars.append(arg)
+                # bool check MUST be before int check, since bool is a subclass of int
+                elif isinstance(arg, bool):
+                    # A bool.
+                    input_bool_scalar_positions.append(i)
+                    input_bool_scalars.append(int(arg))
                 elif isinstance(arg, int):
                     # A int.
                     input_int_scalar_positions.append(i)
@@ -172,6 +180,9 @@ def _export_pt_1_10(g, n, *args, **kwargs):
             "comment_s": debug_comment,
         }
 
+        if len(input_bool_scalars) > 0:
+            attrs["input_bool_scalars_i"] = input_bool_scalars
+            attrs["input_bool_scalar_positions_i"] = input_bool_scalar_positions
         if len(input_int_scalars) > 0:
             attrs["input_int_scalars_i"] = input_int_scalars
             attrs["input_int_scalar_positions_i"] = input_int_scalar_positions

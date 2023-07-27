@@ -117,11 +117,15 @@ class PythonOpBase {
   // Types. input_tensor_types_[i] is the element type of the i-th tensor.
   std::vector<int64_t> input_tensor_types_;
 
-  // Concatenation of all floats from apply(...) 's inputs.
+  // Concatenation of all bools from apply(...) 's inputs.
+  std::vector<int64_t> input_bool_scalars_;
+  std::vector<int64_t> input_bool_scalar_positions_;
+
+  // Concatenation of all ints from apply(...) 's inputs.
   std::vector<int64_t> input_int_scalars_;
   std::vector<int64_t> input_int_scalar_positions_;
 
-  // Concatenation of all ints from apply(...) 's inputs.
+  // Concatenation of all floats from apply(...) 's inputs.
   std::vector<float> input_float_scalars_;
   std::vector<int64_t> input_float_scalar_positions_;
 
@@ -142,7 +146,7 @@ class PythonOpBase {
   std::vector<int64_t> output_tensor_types_;
 
  private:
-  void AddIntScalarArgs();
+  void AddScalarArgs();
   void AddInputTupleArgs();
   void AddFloatTupleArgs();
   void AddPointerScalarArgs();

@@ -62,6 +62,12 @@ void PythonOpBase::Init(const OpKernelInfo& info) {
 
   ORT_ENFORCE(input_tensor_types_.size() == info.node().InputDefs().size());
 
+  // Input bool scalars.
+  input_bool_scalars_ = info.GetAttrsOrDefault("input_bool_scalars", std::vector<int64_t>());
+  input_bool_scalar_positions_ = info.GetAttrsOrDefault("input_bool_scalar_positions", std::vector<int64_t>());
+
+  ORT_ENFORCE(input_bool_scalars_.size() == input_bool_scalar_positions_.size());
+
   // Input int scalars.
   input_int_scalars_ = info.GetAttrsOrDefault("input_int_scalars", std::vector<int64_t>());
   input_int_scalar_positions_ = info.GetAttrsOrDefault("input_int_scalar_positions", std::vector<int64_t>());
@@ -92,7 +98,7 @@ void PythonOpBase::Init(const OpKernelInfo& info) {
   input_pointer_scalar_positions_ = info.GetAttrsOrDefault("input_pointer_scalar_positions", std::vector<int64_t>());
 
   ORT_ENFORCE(input_pointer_scalars_.size() == input_pointer_scalar_positions_.size());
-  auto non_tensor_input_count = input_int_scalars_.size() + input_float_scalars_.size() +
+  auto non_tensor_input_count = input_bool_scalars_.size() + input_int_scalars_.size() + input_float_scalars_.size() +
                                 input_int_tuple_positions_.size() + input_float_tuple_positions_.size() +
                                 input_pointer_scalars_.size();
   ORT_ENFORCE(non_tensor_input_count + input_tensor_types_.size() == input_convention_.size(),
@@ -146,7 +152,13 @@ void PythonOpBase::SetOutputs(OpKernelContext* context, void* diff_ctx, std::vec
   SetOtherOutputs(context, returned_args);
 }
 
-void PythonOpBase::AddIntScalarArgs() {
+void PythonOpBase::AddScalarArgs() {
+  for (size_t i = 0; i < input_bool_scalars_.size(); ++i) {
+    const_arg_set_.Add(input_bool_scalar_positions_.at(i),
+                       PyBool_FromLong(input_bool_scalars_.at(i)),
+                       true /*owned*/);
+  }
+
   for (size_t i = 0; i < input_int_scalars_.size(); ++i) {
     const_arg_set_.Add(input_int_scalar_positions_.at(i),
                        Py_BuildValue("L", static_cast<long long>(input_int_scalars_.at(i))),
@@ -207,7 +219,7 @@ void PythonOpBase::AddPointerScalarArgs() {
 
 void PythonOpBase::CreateConstArgs() {
   ORT_ENFORCE(const_arg_set_.Size() == 0);
-  AddIntScalarArgs();
+  AddScalarArgs();
   AddInputTupleArgs();
   AddFloatTupleArgs();
   AddPointerScalarArgs();

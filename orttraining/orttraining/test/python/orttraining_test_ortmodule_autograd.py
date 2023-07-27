@@ -780,35 +780,37 @@ def test_two_outputs_function():
     run_training_test_and_compare(model_builder, input_generator, label_input)
 
 
+class TwoOutputsFunctionWithNoGradOutput(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, y, test_config_materialize_grad):
+        ctx.save_for_backward(x, y)
+        w = x + y
+        z = x * y
+        ctx.set_materialize_grads(test_config_materialize_grad)
+        ctx.test_config_materialize_grad = test_config_materialize_grad
+        return w, z
+
+    @staticmethod
+    def backward(ctx, dw, dz):
+        x, y = ctx.saved_tensors
+        print(dw, dz)
+        if ctx.test_config_materialize_grad:
+            assert dw is not None
+            assert dz is not None
+        else:
+            assert dw is None
+            assert dz is not None
+        dx = dz * y
+        dy = dz * x
+        return dx, dy, None
+
+
 @pytest.mark.skipif(
     torch_version_lower_than("1.10.0"),
     reason="PyTorch older than 1.10.0 has bugs for exporting multiple output custom function",
 )
-@pytest.mark.parametrize("materialize_grad", [True])
-def test_two_outputs_function_with_no_grad_output(materialize_grad):
-    class TwoOutputsFunctionWithNoGradOutput(torch.autograd.Function):
-        @staticmethod
-        def forward(ctx, x, y):
-            ctx.save_for_backward(x, y)
-            w = x + y
-            z = x * y
-            ctx.set_materialize_grads(materialize_grad)
-            return w, z
-
-        @staticmethod
-        def backward(ctx, dw, dz):
-            x, y = ctx.saved_tensors
-            print(dw, dz)
-            # if materialize_grad:
-            #     assert dw is not None
-            #     assert dz is not None
-            # else:
-            #     assert dw is None
-            #     assert dz is not None
-            dx = dz * y
-            dy = dz * x
-            return dx, dy
-
+@pytest.mark.parametrize("materialize_grad", [True, False])
+def test_two_outputs_function_with_no_grad_output(materialize_grad: bool):
     class TwoOutputsFunctionWithNoGradOutputModel(torch.nn.Module):
         def __init__(self, output_size):
             super().__init__()
@@ -820,7 +822,7 @@ def test_two_outputs_function_with_no_grad_output(materialize_grad):
 
         def forward(self, x):
             # Be noted, the first output is not used in backward, so it should not require grad.
-            _, b = self.fun(x, self.bias)
+            _, b = self.fun(x, self.bias, materialize_grad)
             return b
 
     output_size = 2
@@ -835,7 +837,7 @@ def test_two_outputs_function_with_no_grad_output(materialize_grad):
     label_input = torch.ones([output_size])
 
     # Test multi-input and multi-output custom function.
-    run_training_test_and_compare(model_builder, input_generator, label_input)  # noqa: F405
+    run_training_test_and_compare(model_builder, input_generator, label_input)
 
 
 def test_inner_module_call():
