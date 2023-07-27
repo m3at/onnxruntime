@@ -1501,7 +1501,7 @@ def test_python_op_save_input_for_backward():
 
             for i in range(len(w)):
                 msg = str(w[i].message)
-                if "Add input index to INPUT_TENSOR_TO_SAVE_IN_CTX" in msg:
+                if "Add input index to _GlobalOpKernelInfoMap" in msg:
                     count += 1
 
         if index == 0:
