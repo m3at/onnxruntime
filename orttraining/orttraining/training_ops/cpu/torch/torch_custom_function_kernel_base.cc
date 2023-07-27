@@ -164,9 +164,7 @@ void PythonOpBase::SetOutputs(OpKernelContext* context, void* diff_ctx, std::vec
 
 void PythonOpBase::AddPrimitiveTypeScalarArgs() {
   for (size_t i = 0; i < input_bool_scalars_.size(); ++i) {
-    const_arg_set_.Add(input_bool_scalar_positions_.at(i),
-                       PyBool_FromLong(input_bool_scalars_.at(i)),
-                       true /*owned*/);
+    const_arg_set_.Add(input_bool_scalar_positions_.at(i), PyBool_FromLong(input_bool_scalars_.at(i)), true /*owned*/);
   }
 
   for (size_t i = 0; i < input_int_scalars_.size(); ++i) {

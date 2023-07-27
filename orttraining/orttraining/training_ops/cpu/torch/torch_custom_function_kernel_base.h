@@ -24,8 +24,7 @@ class PythonOpBase {
     Init(info);
   }
 
-  void
-  Init(const OpKernelInfo& info);
+  void Init(const OpKernelInfo& info);
 
   void RunForward(OpKernelContext* context,
                   void** diff_ctx,
