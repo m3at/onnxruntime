@@ -38,8 +38,6 @@ if (GDK_PLATFORM)
   target_compile_definitions(absl_symbolize PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
 endif()
 
-if(NOT onnxruntime_DISABLE_ABSEIL)
-  set(ABSEIL_LIBS absl::inlined_vector absl::flat_hash_set
+set(ABSEIL_LIBS absl::inlined_vector absl::flat_hash_set
     absl::flat_hash_map absl::node_hash_set absl::node_hash_map absl::base absl::throw_delegate absl::raw_hash_set
-    absl::hash absl::city absl::low_level_hash absl::raw_logging_internal)
-endif()
+    absl::hash absl::city absl::low_level_hash absl::raw_logging_internal absl::synchronization absl::time)
