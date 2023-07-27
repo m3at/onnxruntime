@@ -7,6 +7,7 @@
 
 import copy
 import os
+from typing import Tuple
 
 import pytest
 import torch
@@ -247,13 +248,39 @@ def test_megatronf():
 
 
 def test_scalar_and_tuple():
+    alpha_value = 5.0
+    beta_value = (-1.0, 2.0)
+    gamma_value = -1.0
+    delta_value = True
+    epsilon_value = (False, True)
+    zeta_value = 1
+    eta_value = (2, 3)
+    theta_value = (3.0, 4.0)
+
     class ScalarAndTupleFunction(torch.autograd.Function):
         @staticmethod
-        def forward(ctx, input, alpha, beta, gamma):
+        def forward(
+            ctx,
+            input,
+            alpha: float,
+            beta: Tuple[float, float],
+            gamma: float,
+            delta: bool,
+            epsilon: Tuple[bool, bool],
+            zeta: int,
+            eta: Tuple[int, int],
+            theta: Tuple[float, float],
+        ):
             ctx.save_for_backward(input)
             ctx.alpha = alpha
             ctx.beta = beta
             ctx.gamma = gamma
+            ctx.delta = delta
+            ctx.epsilon = epsilon
+            ctx.zeta = zeta
+            ctx.eta = eta
+            ctx.theta = theta
+
             return alpha * beta[0] * beta[1] * gamma * input.clamp(min=0)
 
         @staticmethod
@@ -264,7 +291,32 @@ def test_scalar_and_tuple():
             gamma = ctx.gamma
             grad_input = grad_output.clone()
             grad_input[input < 0] = 0
-            return alpha * beta[0] * beta[1] * gamma * grad_input, None, None, None
+
+            assert alpha == alpha_value
+            assert isinstance(alpha, float)
+
+            assert all(a == b for a, b in zip(beta, beta_value))
+            assert all(isinstance(x, float) for x in beta)
+
+            assert gamma == gamma_value
+            assert isinstance(gamma, float)
+
+            assert ctx.delta == delta_value
+            assert isinstance(ctx.delta, bool)
+
+            assert all(a == b for a, b in zip(ctx.epsilon, epsilon_value))
+            assert all(isinstance(x, bool) for x in ctx.epsilon)
+
+            assert ctx.zeta == zeta_value
+            assert isinstance(ctx.zeta, int)
+
+            assert all(a == b for a, b in zip(ctx.eta, eta_value))
+            assert all(isinstance(x, int) for x in ctx.eta)
+
+            assert all(a == b for a, b in zip(ctx.theta, theta_value))
+            assert all(isinstance(x, float) for x in ctx.theta)
+
+            return alpha * beta[0] * beta[1] * gamma * grad_input, None, None, None, None, None, None, None, None
 
     class ScalarAndTupleModel(torch.nn.Module):
         def __init__(self, output_size):
@@ -275,7 +327,9 @@ def test_scalar_and_tuple():
 
         def forward(self, x):
             h = self.linear_a(x)
-            h = self.activation(h, 5.0, (-1.0, 2.0), -1.0)
+            h = self.activation(
+                h, alpha_value, beta_value, gamma_value, delta_value, epsilon_value, zeta_value, eta_value, theta_value
+            )
             h = self.linear_b(h)
             return h
 

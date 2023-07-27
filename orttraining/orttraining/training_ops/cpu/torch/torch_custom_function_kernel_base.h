@@ -129,6 +129,11 @@ class PythonOpBase {
   std::vector<float> input_float_scalars_;
   std::vector<int64_t> input_float_scalar_positions_;
 
+  // Concatenation of all bool tuples from apply(...) 's inputs.
+  std::vector<int64_t> input_bool_tuples_;
+  std::vector<int64_t> input_bool_tuple_positions_;
+  std::vector<int64_t> input_bool_tuple_begins_;
+
   // Concatenation of all int tuples from apply(...) 's inputs.
   std::vector<int64_t> input_int_tuples_;
   std::vector<int64_t> input_int_tuple_positions_;
@@ -146,7 +151,7 @@ class PythonOpBase {
   std::vector<int64_t> output_tensor_types_;
 
  private:
-  void AddScalarArgs();
+  void AddPrimitiveTypeScalarArgs();
   void AddInputTupleArgs();
   void AddFloatTupleArgs();
   void AddPointerScalarArgs();

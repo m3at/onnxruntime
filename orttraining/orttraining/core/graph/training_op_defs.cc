@@ -3790,7 +3790,7 @@ Return true if all elements are true and false otherwise.
       // Input bool scalars.
       .Attr(
           "input_bool_scalars",
-          "Python int arguments.",
+          "Python bool arguments.",
           AttributeProto::INTS,
           false)
       .Attr(
@@ -3817,6 +3817,22 @@ Return true if all elements are true and false otherwise.
           false)
       .Attr(
           "input_float_scalar_positions",
+          "",
+          AttributeProto::INTS,
+          false)
+      // Input bool tuple.
+      .Attr(
+          "input_bool_tuples",
+          "Python bool-tuple arguments.",
+          AttributeProto::INTS,
+          false)
+      .Attr(
+          "input_bool_tuple_positions",
+          "",
+          AttributeProto::INTS,
+          false)
+      .Attr(
+          "input_bool_tuple_begins",
           "",
           AttributeProto::INTS,
           false)

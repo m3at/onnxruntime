@@ -85,6 +85,10 @@ def _export_pt_1_10(g, n, *args, **kwargs):
         input_float_scalars = []
         input_float_scalar_positions = []
 
+        input_bool_tuples = []
+        input_bool_tuple_positions = []
+        input_bool_tuple_begins = []
+
         input_int_tuples = []
         input_int_tuple_positions = []
         input_int_tuple_begins = []
@@ -113,7 +117,7 @@ def _export_pt_1_10(g, n, *args, **kwargs):
                     # A float.
                     input_float_scalar_positions.append(i)
                     input_float_scalars.append(arg)
-                # bool check MUST be before int check, since bool is a subclass of int
+                # bool check MUST be before int check since bool is a subclass of int
                 elif isinstance(arg, bool):
                     # A bool.
                     input_bool_scalar_positions.append(i)
@@ -124,8 +128,13 @@ def _export_pt_1_10(g, n, *args, **kwargs):
                     input_int_scalars.append(arg)
                 elif isinstance(arg, tuple):
                     assert len(arg) > 0
-                    # A tuple of int or float.
-                    if all(isinstance(ele, int) for ele in arg):
+                    # A tuple of bool, int or float.
+                    if all(isinstance(ele, bool) for ele in arg):
+                        # A tuple of bool. bool check MUST be before int check since bool is a subclass of int.
+                        input_bool_tuple_positions.append(i)
+                        input_bool_tuple_begins.append(len(input_bool_tuples))
+                        input_bool_tuples.extend([int(ele) for ele in arg])
+                    elif all(isinstance(ele, int) for ele in arg):
                         # A tuple of ints.
                         input_int_tuple_positions.append(i)
                         input_int_tuple_begins.append(len(input_int_tuples))
@@ -189,6 +198,10 @@ def _export_pt_1_10(g, n, *args, **kwargs):
         if len(input_float_scalars) > 0:
             attrs["input_float_scalars_f"] = input_float_scalars
             attrs["input_float_scalar_positions_i"] = input_float_scalar_positions
+        if len(input_bool_tuples) > 0:
+            attrs["input_bool_tuples_i"] = input_bool_tuples
+            attrs["input_bool_tuple_positions_i"] = input_bool_tuple_positions
+            attrs["input_bool_tuple_begins_i"] = input_bool_tuple_begins
         if len(input_int_tuples) > 0:
             attrs["input_int_tuples_i"] = input_int_tuples
             attrs["input_int_tuple_positions_i"] = input_int_tuple_positions

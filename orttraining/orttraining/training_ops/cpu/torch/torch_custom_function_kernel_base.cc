@@ -80,6 +80,13 @@ void PythonOpBase::Init(const OpKernelInfo& info) {
 
   ORT_ENFORCE(input_float_scalars_.size() == input_float_scalar_positions_.size());
 
+  // Input bool tuples.
+  input_bool_tuples_ = info.GetAttrsOrDefault("input_bool_tuples", std::vector<int64_t>());
+  input_bool_tuple_positions_ = info.GetAttrsOrDefault("input_bool_tuple_positions", std::vector<int64_t>());
+  input_bool_tuple_begins_ = info.GetAttrsOrDefault("input_bool_tuple_begins", std::vector<int64_t>());
+
+  ORT_ENFORCE(input_bool_tuple_positions_.size() == input_bool_tuple_begins_.size());
+
   // Input int tuples.
   input_int_tuples_ = info.GetAttrsOrDefault("input_int_tuples", std::vector<int64_t>());
   input_int_tuple_positions_ = info.GetAttrsOrDefault("input_int_tuple_positions", std::vector<int64_t>());
@@ -98,8 +105,11 @@ void PythonOpBase::Init(const OpKernelInfo& info) {
   input_pointer_scalar_positions_ = info.GetAttrsOrDefault("input_pointer_scalar_positions", std::vector<int64_t>());
 
   ORT_ENFORCE(input_pointer_scalars_.size() == input_pointer_scalar_positions_.size());
-  auto non_tensor_input_count = input_bool_scalars_.size() + input_int_scalars_.size() + input_float_scalars_.size() +
-                                input_int_tuple_positions_.size() + input_float_tuple_positions_.size() +
+  auto non_tensor_input_count = input_bool_scalars_.size() + input_int_scalars_.size() +
+                                input_float_scalars_.size() +
+                                input_bool_tuple_positions_.size() +
+                                input_int_tuple_positions_.size() +
+                                input_float_tuple_positions_.size() +
                                 input_pointer_scalars_.size();
   ORT_ENFORCE(non_tensor_input_count + input_tensor_types_.size() == input_convention_.size(),
               "Total input (tensor + non-tensor) count did not match.");
@@ -152,7 +162,7 @@ void PythonOpBase::SetOutputs(OpKernelContext* context, void* diff_ctx, std::vec
   SetOtherOutputs(context, returned_args);
 }
 
-void PythonOpBase::AddScalarArgs() {
+void PythonOpBase::AddPrimitiveTypeScalarArgs() {
   for (size_t i = 0; i < input_bool_scalars_.size(); ++i) {
     const_arg_set_.Add(input_bool_scalar_positions_.at(i),
                        PyBool_FromLong(input_bool_scalars_.at(i)),
@@ -172,6 +182,22 @@ void PythonOpBase::AddScalarArgs() {
 }
 
 void PythonOpBase::AddInputTupleArgs() {
+  for (size_t i = 0; i < input_bool_tuple_begins_.size(); ++i) {
+    // Process i-th tuple.
+    // Starting index of i-th tuple in the concatenation buffer.
+    const size_t begin = input_bool_tuple_begins_.at(i);
+    // Endding (exclusive) index of i-th tuple in the concatenation buffer.
+    const size_t end =
+        (i + 1 == input_bool_tuple_begins_.size()) ? input_bool_tuples_.size() : input_bool_tuple_begins_.at(i + 1);
+    PyObject* tuple = PyTuple_New(end - begin);
+    for (size_t j = begin; j < end; ++j) {
+      PyObject* item = PyBool_FromLong(input_bool_tuples_.at(j));
+      PyTuple_SetItem(tuple, j - begin, item);
+    }
+
+    const_arg_set_.Add(input_bool_tuple_positions_.at(i), tuple, true /*owned*/);
+  }
+
   for (size_t i = 0; i < input_int_tuple_begins_.size(); ++i) {
     // Process i-th tuple.
     // Starting index of i-th tuple in the concatenation buffer.
@@ -219,7 +245,7 @@ void PythonOpBase::AddPointerScalarArgs() {
 
 void PythonOpBase::CreateConstArgs() {
   ORT_ENFORCE(const_arg_set_.Size() == 0);
-  AddScalarArgs();
+  AddPrimitiveTypeScalarArgs();
   AddInputTupleArgs();
   AddFloatTupleArgs();
   AddPointerScalarArgs();
