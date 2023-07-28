@@ -7,7 +7,10 @@
 class Operators:
     ATTENTION = "Attention"
     LAYERNORM = "LayerNormalization"
+    ATTENTION = "Attention"
+    MULTI_HEAD_ATTENTION = "MultiHeadAttention"
     PACKEDATTENTION = "PackedAttention"
+    PACKED_MULTI_HEAD_ATTENTION = "PackedMultiHeadAttention"
     REMOVEPADDING = "RemovePadding"
     RESTOREPADDING = "RestorePadding"
     SKIPLAYERNORM = "SkipLayerNormalization"

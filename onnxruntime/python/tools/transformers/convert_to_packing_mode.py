@@ -29,6 +29,7 @@ class PackingMode:
         self.node_name_to_graph_name: dict = {}
         self.this_graph_name: str = self.model.model.graph.name
         self.attention_nodes = self.model.get_nodes_by_op_type(Operators.ATTENTION)
+        self.mha_nodes = self.model.get_nodes_by_op_type(Operators.MULTI_HEAD_ATTENTION)
 
     def _try_getting_attention_mask(self) -> Union[str, None]:
         first_attention_node = self._try_getting_first_attention()
@@ -132,6 +133,36 @@ class PackingMode:
             self.nodes_to_remove.append(attention)
             self.node_name_to_graph_name[packed_attention.name] = self.this_graph_name
 
+    def _replace_mha_with_packed_mha(self, token_offset: str, cumulative_sequence_length: str) -> None:
+        for mha in self.mha_nodes:
+            packed_attention = helper.make_node(
+                Operators.PACKED_MULTI_HEAD_ATTENTION,
+                inputs=[
+                    attention.input[AttentionInputIDs.INPUT],
+                    attention.input[AttentionInputIDs.WEIGHTS],
+                    attention.input[AttentionInputIDs.BIAS],
+                    token_offset,
+                    cumulative_sequence_length,
+                    attention.input[AttentionInputIDs.RELATIVE_POSITION_BIAS]
+                    if len(attention.input) > AttentionInputIDs.RELATIVE_POSITION_BIAS
+                    else "",
+                ],
+                outputs=[attention.output[AttentionOutputIDs.OUTPUT]],
+                name=self.model.create_node_name(Operators.PACKEDATTENTION),
+            )
+
+            attributes = []
+            for attr in attention.attribute:
+                if attr.name in ["num_heads", "qkv_hidden_sizes", "scale"]:
+                    attributes.append(attr)
+
+            packed_attention.attribute.extend(attributes)
+            packed_attention.domain = "com.microsoft"
+            self.nodes_to_add.append(packed_attention)
+            self.nodes_to_remove.append(attention)
+            self.node_name_to_graph_name[packed_attention.name] = self.this_graph_name
+
+
     def convert(self, use_symbolic_shape_infer: bool = True) -> None:
         logger.debug("start converting to packing model...")
         if not self._are_attentions_supportted():
@@ -166,9 +197,13 @@ class PackingMode:
         self.model.replace_output_of_all_nodes(last_layernorm_node.output[0], restorepadding_input)
         logger.debug(f"inserted RestorePadding after last {last_layernorm_node.op_type} layer")
 
-        # insert PackingAttention
+        # insert PackedAttention
         self._replace_attention_with_packing_attention(token_offset, cumulated_seq_len)
         logger.debug("replaced Attention with PackedAttention")
+
+        # insert PackedMultiHeadAttention
+        self._replace_mha_with_packed_mha(token_offset, cumulated_seq_len)
+        logger.debug("replaced MultiHeadAttention with PackedMultiHeadAttention")
 
         self.model.remove_nodes(self.nodes_to_remove)
         self.model.add_nodes(self.nodes_to_add, self.node_name_to_graph_name)
